@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../app_colors.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/tappable_logo.dart';
 import 'home_page_screens.dart'; // ← التعديل: نفس اسم الملف الفعلي
+import 'user_session_screen.dart'; // ← جلسة المستخدم (بتغذّي شاشة حسابي)
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,9 +14,15 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  /// طول الرقم الجامعي وكلمة المرور
+  static const int _idLength = 12;
+  static const int _passLength = 6;
+
   final _formKey = GlobalKey<FormState>();
   final _idCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+  final _idFocus = FocusNode();
+  final _passFocus = FocusNode();
 
   bool _open = false;
   bool _hidePass = true;
@@ -22,11 +30,53 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
 
+  /// بتخفي كيبورد النظام لو طلع لأي سبب
+  void _hideSystemKeyboard() {
+    SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _idFocus.addListener(() {
+      if (_idFocus.hasFocus) _hideSystemKeyboard();
+    });
+    _passFocus.addListener(() {
+      if (_passFocus.hasFocus) _hideSystemKeyboard();
+    });
+  }
+
   @override
   void dispose() {
     _idCtrl.dispose();
     _passCtrl.dispose();
+    _idFocus.dispose();
+    _passFocus.dispose();
     super.dispose();
+  }
+
+  /// بتجيب بيانات الطالب بعد تسجيل الدخول.
+  /// ⚠️ حالياً بترجّع بيانات مؤقتة: الرقم الجامعي من اللي انكتب بالحقل.
+  /// TODO: بدّلها بطلب حقيقي (API / Firebase / قاعدة بيانات الجامعة)
+  /// وارجع منها الاسم والكلية والتخصص الفعليين.
+  Future<UserProfile> _fetchProfile(String studentId, String password) async {
+    // مثال عند وجود API:
+    // final res = await http.post(Uri.parse('https://.../login'), body: {...});
+    // final data = jsonDecode(res.body);
+    // return UserProfile(
+    //   name: data['name'],
+    //   studentId: data['studentId'],
+    //   college: data['college'],
+    //   major: data['major'],
+    // );
+
+    await Future.delayed(const Duration(seconds: 1)); // محاكاة التحميل
+    return UserProfile(
+      name: 'طالب مؤتة',
+      studentId: studentId,
+      college: 'غير محدد',
+      major: 'غير محدد',
+    );
   }
 
   // Login and navigate to Home Page
@@ -37,19 +87,43 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _loading = true);
 
-    // Temporary loading simulation
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final profile = await _fetchProfile(
+        _idCtrl.text.trim(),
+        _passCtrl.text,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() => _loading = false);
+      // بنحفظ المستخدم بالجلسة: شاشة حسابي بتتحدّث تلقائياً
+      signIn(profile);
 
-    // Open HomePageScreen
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => const HomePageScreen(),
-      ),
-    );
+      setState(() => _loading = false);
+
+      // Open HomePageScreen
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const HomePageScreen(),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('تعذّر تسجيل الدخول'),
+          content: const Text('تأكد من الرقم الجامعي وكلمة المرور وحاول مرة ثانية.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('حسناً'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override
@@ -197,14 +271,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
             const SizedBox(height: 20),
 
+            // الرقم الجامعي: 12 رقم فقط
             _field(
               controller: _idCtrl,
+              focusNode: _idFocus,
               label: 'الرقم الجامعي / Student ID',
               icon: Icons.badge_outlined,
-              keyboard: TextInputType.number,
+              action: TextInputAction.next,
+              onSubmitted: (_) => _passFocus.requestFocus(),
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(_idLength),
+              ],
               validator: (value) {
-                if (value == null || value.trim().isEmpty) {
+                final v = value?.trim() ?? '';
+                if (v.isEmpty) {
                   return 'أدخل الرقم الجامعي';
+                }
+                if (v.length != _idLength) {
+                  return 'الرقم الجامعي يتكوّن من $_idLength رقم';
                 }
                 return null;
               },
@@ -212,11 +297,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
             const SizedBox(height: 14),
 
+            // كلمة المرور: 6 أرقام فقط
             _field(
               controller: _passCtrl,
+              focusNode: _passFocus,
               label: 'كلمة المرور / Password',
               icon: Icons.lock_outline,
               obscure: _hidePass,
+              action: TextInputAction.done,
+              onSubmitted: (_) => _loading ? null : _submit(),
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(_passLength),
+              ],
               suffix: IconButton(
                 icon: Icon(
                   _hidePass ? Icons.visibility_off : Icons.visibility,
@@ -228,8 +321,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
               ),
               validator: (value) {
-                if (value == null || value.length < 6) {
-                  return 'كلمة المرور 6 أحرف على الأقل';
+                final v = value ?? '';
+                if (v.isEmpty) {
+                  return 'أدخل كلمة المرور';
+                }
+                if (v.length != _passLength) {
+                  return 'كلمة المرور تتكوّن من $_passLength أرقام';
                 }
                 return null;
               },
@@ -282,11 +379,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _field({
     required TextEditingController controller,
+    required FocusNode focusNode,
     required String label,
     required IconData icon,
     bool obscure = false,
     Widget? suffix,
-    TextInputType? keyboard,
+    TextInputAction? action,
+    ValueChanged<String>? onSubmitted,
+    List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
   }) {
     OutlineInputBorder border(
@@ -305,8 +405,16 @@ class _LoginScreenState extends State<LoginScreen> {
     // حقول الإدخال تبقى بيضاء بالوضعين عشان النص يبقى واضح
     return TextFormField(
       controller: controller,
+      focusNode: focusNode,
       obscureText: obscure,
-      keyboardType: keyboard,
+      // none = ما بيطلع كيبورد على الشاشة، والكتابة مباشرة بالحقل
+      keyboardType: TextInputType.none,
+      textInputAction: action,
+      onFieldSubmitted: onSubmitted,
+      onTap: _hideSystemKeyboard,
+      enableSuggestions: false,
+      autocorrect: false,
+      inputFormatters: inputFormatters,
       validator: validator,
       style: const TextStyle(
         color: AppColors.cyberTeal,

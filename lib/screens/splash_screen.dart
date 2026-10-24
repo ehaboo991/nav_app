@@ -85,85 +85,113 @@ class _SplashScreenState extends State<SplashScreen>
             Positioned.fill(
               child: CustomPaint(painter: WavesPainter()),
             ),
+            // SizedBox بعرض الشاشة كاملة عشان الـ Column يتوسّط أفقياً
+            // (بدونه الـ Column بياخد عرض أعرض عنصر وبيلزق على اليسار)
             SafeArea(
-              child: Column(
-                children: [
-                  const Spacer(flex: 1),
-                  Hero(
-                    tag: logoHeroTag,
-                    flightShuttleBuilder: logoShuttle,
-                    child: AnimatedAppLogo(controller: _intro),
-                  ),
-                  const SizedBox(height: 12),
-                  FadeTransition(
-                    opacity: titleFade,
-                    child: Column(
-                      children: [
-                        const BrandTitle(fontSize: 44),
-                        const SizedBox(height: 4),
-                        Text(
-                          'University Indoor Navigation System',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.cyberTeal.withOpacity(0.75),
-                          ),
+              child: SizedBox(
+                width: double.infinity,
+                height: double.infinity,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // المحتوى الأساسي بنص الشاشة (أفقياً وعمودياً)
+                    Expanded(
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Hero(
+                              tag: logoHeroTag,
+                              flightShuttleBuilder: logoShuttle,
+                              child: AnimatedAppLogo(controller: _intro),
+                            ),
+                            const SizedBox(height: 12),
+                            FadeTransition(
+                              opacity: titleFade,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  const BrandTitle(fontSize: 44),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'University Indoor Navigation System',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.cyberTeal
+                                          .withOpacity(0.75),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            const Text(
+                              'جامعة مؤتة',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.cyberTeal,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'MUTAH UNIVERSITY',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 12,
+                                letterSpacing: 3,
+                                color: AppColors.cyberTeal.withOpacity(0.7),
+                              ),
+                            ),
+                            const SizedBox(height: 36),
+                            const Text(
+                              'Find your way around',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 22,
+                                color: AppColors.cyberTeal,
+                              ),
+                            ),
+                            const Text(
+                              'Mutah University.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.cyberTeal,
+                              ),
+                            ),
+
+                            // تم تعطيل RouteMap مؤقتاً للتحقق من زوال مشكلة التجميد والشاشة السوداء
+                            /*
+                            Expanded(
+                              flex: 3,
+                              child: RouteMap(progress: _route),
+                            ),
+                            */
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'جامعة مؤتة',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.cyberTeal,
+
+                    // نقاط التحميل بأسفل الشاشة وبالنص
+                    LoadingDots(controller: _dots),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Loading...',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.cyberTeal.withOpacity(0.6),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'MUTAH UNIVERSITY',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      letterSpacing: 3,
-                      color: AppColors.cyberTeal.withOpacity(0.7),
-                    ),
-                  ),
-                  const SizedBox(height: 36),
-                  const Text(
-                    'Find your way around',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 22, color: AppColors.cyberTeal),
-                  ),
-                  const Text(
-                    'Mutah University.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.cyberTeal,
-                    ),
-                  ),
-                  Expanded(
-                    flex: 3,
-                    child: RouteMap(progress: _route),
-                  ),
-                  const SizedBox(height: 16),
-                  LoadingDots(controller: _dots),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Loading...',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.cyberTeal.withOpacity(0.6),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             ),
           ],
