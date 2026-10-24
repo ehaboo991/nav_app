@@ -57,12 +57,12 @@ class _TappableLogoState extends State<TappableLogo>
               // الوضع الغامق: دائرة Aqua Foam عشان الشعار الغامق يبين
               // الوضع الفاتح: دائرة بيضاء
               color: dark
-                  ? AppColors.aquaFoam.withOpacity(0.85)
-                  : Colors.white.withOpacity(0.75),
+                  ? AppColors.aquaFoam.withValues(alpha: 0.85)
+                  : Colors.white.withValues(alpha: 0.75),
               boxShadow: [
                 BoxShadow(
                   color: (dark ? AppColors.aquaFoam : AppColors.cyberTeal)
-                      .withOpacity(0.25 + 0.25 * t),
+                      .withValues(alpha: 0.25 + 0.25 * t),
                   blurRadius: 24 + 20 * t,
                   spreadRadius: 4 + 10 * t,
                 ),

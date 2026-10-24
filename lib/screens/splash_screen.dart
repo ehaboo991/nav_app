@@ -46,8 +46,8 @@ class _SplashScreenState extends State<SplashScreen>
         PageRouteBuilder(
           transitionDuration: const Duration(milliseconds: 800),
           reverseTransitionDuration: const Duration(milliseconds: 400),
-          pageBuilder: (_, __, ___) => const WelcomeScreen(),
-          transitionsBuilder: (_, anim, __, child) =>
+          pageBuilder: (_, _, _) => const WelcomeScreen(),
+          transitionsBuilder: (_, anim, _, child) =>
               FadeTransition(opacity: anim, child: child),
         ),
       );
@@ -106,7 +106,7 @@ class _SplashScreenState extends State<SplashScreen>
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 13,
-                            color: AppColors.cyberTeal.withOpacity(0.75),
+                            color: AppColors.cyberTeal.withValues(alpha: 0.75),
                           ),
                         ),
                       ],
@@ -129,7 +129,7 @@ class _SplashScreenState extends State<SplashScreen>
                     style: TextStyle(
                       fontSize: 12,
                       letterSpacing: 3,
-                      color: AppColors.cyberTeal.withOpacity(0.7),
+                      color: AppColors.cyberTeal.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 36),
@@ -159,7 +159,7 @@ class _SplashScreenState extends State<SplashScreen>
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
-                      color: AppColors.cyberTeal.withOpacity(0.6),
+                      color: AppColors.cyberTeal.withValues(alpha: 0.6),
                     ),
                   ),
                   const SizedBox(height: 24),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'map_viewer_screen.dart';
 import 'colleges_screen.dart';
+import 'start_navigation_screen.dart';
 
 const Color cyberTeal = Color(0xFF03303B);
 const Color aquaFoam = Color(0xFF96FCDF);
@@ -50,6 +51,13 @@ class _HomePageScreenState extends State<HomePageScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const MapViewerScreen()),
+    );
+  }
+
+  void openNavigation() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const StartNavigationScreen()),
     );
   }
 
@@ -243,7 +251,7 @@ class _HomePageScreenState extends State<HomePageScreen> {
                             child: Image.asset(
                               'image/Mutah_Map.png',
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
+                              errorBuilder: (_, _, _) => Container(
                                 color: mapBox,
                                 alignment: Alignment.center,
                                 child: Icon(Icons.map_outlined,
@@ -295,7 +303,7 @@ class _HomePageScreenState extends State<HomePageScreen> {
                       Icons.navigation,
                       'ابدأ الملاحة',
                       'الوصول إلى وجهتك',
-                      () => showMessage('اختر وجهتك'),
+                      openNavigation,
                       actionBg,
                       border,
                       avatarBg,

@@ -4,7 +4,7 @@ import '../app_colors.dart';
 class WavesPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final top = Paint()..color = AppColors.cyberTeal.withOpacity(0.12);
+    final top = Paint()..color = AppColors.cyberTeal.withValues(alpha: 0.12);
     final topPath = Path()
       ..moveTo(0, 0)
       ..lineTo(size.width * 0.55, 0)
@@ -19,7 +19,7 @@ class WavesPainter extends CustomPainter {
       ..close();
     canvas.drawPath(topPath, top);
 
-    final bottom = Paint()..color = AppColors.cyberTealLight.withOpacity(0.18);
+    final bottom = Paint()..color = AppColors.cyberTealLight.withValues(alpha: 0.18);
     final bottomPath = Path()
       ..moveTo(size.width, size.height)
       ..lineTo(size.width, size.height * 0.88)
