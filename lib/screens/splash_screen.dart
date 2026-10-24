@@ -4,7 +4,7 @@ import '../app_colors.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/brand_title.dart';
 import '../widgets/loading_dots.dart';
-import '../widgets/route_map.dart';
+import '../widgets/route_map.dart'; //
 import '../widgets/waves_painter.dart';
 import 'welcome_screen.dart';
 
@@ -46,8 +46,8 @@ class _SplashScreenState extends State<SplashScreen>
         PageRouteBuilder(
           transitionDuration: const Duration(milliseconds: 800),
           reverseTransitionDuration: const Duration(milliseconds: 400),
-          pageBuilder: (_, __, ___) => const WelcomeScreen(),
-          transitionsBuilder: (_, anim, __, child) =>
+          pageBuilder: (_, _, _) => const WelcomeScreen(),
+          transitionsBuilder: (_, anim, _, child) =>
               FadeTransition(opacity: anim, child: child),
         ),
       );

@@ -68,7 +68,7 @@ class WelcomeScreen extends StatelessWidget {
                               'University Indoor Navigation System',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: AppColors.cyberTeal.withOpacity(0.75),
+                                color: AppColors.cyberTeal.withValues(alpha: 0.75),
                               ),
                             ),
                           ],
@@ -89,7 +89,7 @@ class WelcomeScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         letterSpacing: 3,
-                        color: AppColors.cyberTeal.withOpacity(0.7),
+                        color: AppColors.cyberTeal.withValues(alpha: 0.7),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -116,7 +116,7 @@ class WelcomeScreen extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 17,
                                 height: 1.3,
-                                color: AppColors.cyberTeal.withOpacity(0.7),
+                                color: AppColors.cyberTeal.withValues(alpha: 0.7),
                               ),
                             ),
                           ],
@@ -183,7 +183,7 @@ class _MutahImage extends StatelessWidget {
         child: Image.asset(
           'image/mutah.jpeg',
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Stack(
+          errorBuilder: (_, _, _) => Stack(
             children: [
               Container(
                 decoration: const BoxDecoration(

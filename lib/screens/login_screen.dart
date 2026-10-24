@@ -184,7 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 'Tap the logo to sign in',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: mainColor.withOpacity(0.7),
+                                  color: mainColor.withValues(alpha: 0.7),
                                   fontSize: 13,
                                   height: 1.5,
                                 ),
@@ -243,11 +243,11 @@ class _LoginScreenState extends State<LoginScreen> {
         color: cardColor,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: mainColor.withOpacity(0.15),
+          color: mainColor.withValues(alpha: 0.15),
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.cyberTeal.withOpacity(0.08),
+            color: AppColors.cyberTeal.withValues(alpha: 0.08),
             blurRadius: 25,
             offset: const Offset(0, 10),
           ),
@@ -313,7 +313,7 @@ class _LoginScreenState extends State<LoginScreen> {
               suffix: IconButton(
                 icon: Icon(
                   _hidePass ? Icons.visibility_off : Icons.visibility,
-                  color: AppColors.cyberTeal.withOpacity(0.6),
+                  color: AppColors.cyberTeal.withValues(alpha: 0.6),
                   size: 20,
                 ),
                 onPressed: () {
@@ -345,7 +345,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   foregroundColor: _isDark
                       ? AppColors.cyberTeal
                       : AppColors.aquaFoam,
-                  disabledBackgroundColor: mainColor.withOpacity(0.5),
+                  disabledBackgroundColor: mainColor.withValues(alpha: 0.5),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -423,18 +423,18 @@ class _LoginScreenState extends State<LoginScreen> {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(
-          color: AppColors.cyberTeal.withOpacity(0.6),
+          color: AppColors.cyberTeal.withValues(alpha: 0.6),
           fontSize: 13,
         ),
         prefixIcon: Icon(
           icon,
-          color: AppColors.cyberTeal.withOpacity(0.6),
+          color: AppColors.cyberTeal.withValues(alpha: 0.6),
           size: 20,
         ),
         suffixIcon: suffix,
         filled: true,
         fillColor: Colors.white,
-        enabledBorder: border(AppColors.cyberTeal.withOpacity(0.2)),
+        enabledBorder: border(AppColors.cyberTeal.withValues(alpha: 0.2)),
         focusedBorder: border(AppColors.cyberTeal, width: 1.5),
         errorBorder: border(Colors.redAccent),
         focusedErrorBorder: border(Colors.redAccent, width: 1.5),

@@ -46,7 +46,7 @@ class MainButton extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(english, style: TextStyle(color: fg.withOpacity(0.85))),
+                    Text(english, style: TextStyle(color: fg.withValues(alpha: 0.85))),
                   ],
                 ),
               ),

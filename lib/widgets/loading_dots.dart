@@ -9,7 +9,7 @@ class LoadingDots extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: controller,
-      builder: (_, __) {
+      builder: (_, _) {
         final active = (controller.value * 4).floor();
         return Row(
           mainAxisSize: MainAxisSize.min,
@@ -24,7 +24,7 @@ class LoadingDots extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: on
                     ? AppColors.cyberTeal
-                    : AppColors.cyberTeal.withOpacity(0.25),
+                    : AppColors.cyberTeal.withValues(alpha: 0.25),
               ),
             );
           }),
