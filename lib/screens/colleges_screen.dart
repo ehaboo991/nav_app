@@ -1,10 +1,28 @@
 import 'package:flutter/material.dart';
 import 'college_data.dart';
-import 'home_page_screens.dart' show themeNotifier;
+import 'favourite_screen.dart';
+import 'it_college_screen.dart';
+
 
 const Color _cyberTeal = Color(0xFF03303B);
 const Color _aquaFoam = Color(0xFF96FCDF);
-const Color _mapMaroon = Color(0xFF8A1538); // نفس لون دبابيس الخريطة
+
+/// صور الكليات (اختياري): اربط اسم الكلية بمسار الصورة.
+/// إذا الكلية مش موجودة هون بتظهر خلفية متدرجة مع أيقونتها.
+/// لا تنسى تضيف الصور في pubspec.yaml تحت assets.
+const Map<String, String> _photos = {
+  // 'كلية الهندسة': 'assets/colleges/engineering.jpg',
+  // 'كلية الطب البشري': 'assets/colleges/medicine.jpg',
+};
+
+const List<List<Color>> _grads = [
+  [Color(0xFF03303B), Color(0xFF0A6475)],
+  [Color(0xFF0A6475), Color(0xFF1FA39A)],
+  [Color(0xFF05505F), Color(0xFF2A7F85)],
+  [Color(0xFF042A33), Color(0xFF0B7F88)],
+];
+
+enum _Sort { normal, name }
 
 class CollegesScreen extends StatefulWidget {
   const CollegesScreen({super.key});
@@ -16,6 +34,8 @@ class CollegesScreen extends StatefulWidget {
 class _CollegesScreenState extends State<CollegesScreen> {
   final TextEditingController _search = TextEditingController();
   String _query = '';
+  _Sort _sort = _Sort.normal;
+  bool _grid = true;
 
   @override
   void dispose() {
@@ -34,45 +54,111 @@ class _CollegesScreenState extends State<CollegesScreen> {
       _isDark ? _aquaFoam.withAlpha(45) : _aquaFoam.withAlpha(150);
   Color get _tileBg =>
       _isDark ? _aquaFoam.withAlpha(28) : _aquaFoam.withAlpha(85);
+  Color get _shadow => Colors.black.withAlpha(_isDark ? 80 : 22);
 
   List<College> get _filtered {
     final q = _query.trim().toLowerCase();
-    if (q.isEmpty) return colleges;
-    return colleges.where((c) {
-      return c.nameAr.contains(q) ||
-          c.nameEn.toLowerCase().contains(q) ||
-          c.building.toString() == q;
-    }).toList();
-  }
+    var list = q.isEmpty
+        ? List<College>.of(colleges)
+        : colleges.where((c) {
+            return c.nameAr.contains(q) ||
+                c.nameEn.toLowerCase().contains(q) ||
+                c.building.toString() == q;
+          }).toList();
 
-  void _toggleTheme() {
-    themeNotifier.value = _isDark ? ThemeMode.light : ThemeMode.dark;
+    switch (_sort) {
+      case _Sort.name:
+        list.sort((a, b) => a.nameAr.compareTo(b.nameAr));
+        break;
+      case _Sort.normal:
+        break;
+    }
+    return list;
   }
 
   void _openCollege(College c) {
-    // الخطوة 2: هون بنفتح شاشة تفاصيل الكلية
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        backgroundColor: _isDark ? _aquaFoam : _cyberTeal,
-        content: Text(
-          '${c.nameAr} • مبنى ${c.building}',
-          style: TextStyle(color: _isDark ? _cyberTeal : _aquaFoam),
+    if (c.nameAr == 'كلية تكنولوجيا المعلومات') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const ItCollegeDetailsPage(),
         ),
-      ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${c.nameAr} • مبنى ${c.building}'),
+        ),
+      );
+    }
+  }
+
+  void _toggleFav(College c) {
+    final added = toggleFavorite(c.nameAr);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(milliseconds: 1300),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          backgroundColor: _isDark ? _aquaFoam : _cyberTeal,
+          content: Text(
+            added
+                ? 'أُضيفت ${c.nameAr} للمفضلة'
+                : 'أُزيلت ${c.nameAr} من المفضلة',
+            style: TextStyle(color: _isDark ? _cyberTeal : _aquaFoam),
+          ),
+        ),
+      );
+  }
+
+  /// زر المفضلة. [onImage] = true لما يكون فوق صورة الكلية.
+  Widget _favBtn(College c, {required bool onImage}) {
+    const gold = Color(0xFFFFC83D);
+    final bg = onImage ? Colors.black.withAlpha(95) : _tileBg;
+    final off = onImage ? Colors.white : _title;
+
+    return ValueListenableBuilder<Set<String>>(
+      valueListenable: favoritesNotifier,
+      builder: (context, favs, _) {
+        final on = favs.contains(c.nameAr);
+        return Material(
+          color: bg,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () => _toggleFav(c),
+            child: Padding(
+              padding: const EdgeInsets.all(7),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                transitionBuilder: (child, anim) =>
+                    ScaleTransition(scale: anim, child: child),
+                child: Icon(
+                  on ? Icons.star_rounded : Icons.star_border_rounded,
+                  key: ValueKey(on),
+                  size: 22,
+                  color: on ? gold : off,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
   Widget _appear(int i, Widget child) {
     return TweenAnimationBuilder<double>(
-      key: ValueKey('${child.key}$i$_query'),
+      key: ValueKey('$i$_query${_sort.name}$_grid'),
       tween: Tween(begin: 0, end: 1),
-      duration: Duration(milliseconds: 350 + (i.clamp(0, 8)) * 70),
+      duration: Duration(milliseconds: 380 + (i.clamp(0, 8)) * 70),
       curve: Curves.easeOutCubic,
       builder: (_, v, c) => Opacity(
         opacity: v,
-        child: Transform.translate(offset: Offset(0, 20 * (1 - v)), child: c),
+        child: Transform.translate(offset: Offset(0, 24 * (1 - v)), child: c),
       ),
       child: child,
     );
@@ -86,40 +172,40 @@ class _CollegesScreenState extends State<CollegesScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: _bg,
-        body: Stack(
-          children: [
-            // ---------- الخلفية المخصصة ----------
-            Positioned.fill(
-              child: IgnorePointer(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 450),
-                  child: RepaintBoundary(
-                    key: ValueKey(_isDark),
-                    child: CustomPaint(
-                      painter: _BgPainter(isDark: _isDark),
-                    ),
+        body: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(child: _buildHeader(context, list.length)),
+            SliverToBoxAdapter(child: _buildStats(list.length)),
+            SliverToBoxAdapter(child: _buildControls()),
+            if (list.isEmpty)
+              SliverFillRemaining(hasScrollBody: false, child: _buildEmpty())
+            else if (_grid)
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+                sliver: SliverGrid(
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 14,
+                    mainAxisExtent: 232,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (_, i) => _appear(i, _gridCard(list[i], i)),
+                    childCount: list.length,
                   ),
                 ),
-              ),
-            ),
-            // ---------- المحتوى ----------
-            Column(
-              children: [
-                _buildHeader(context, list.length),
-                const SizedBox(height: 40),
-                Expanded(
-                  child: list.isEmpty
-                      ? _buildEmpty()
-                      : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                          itemCount: list.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 12),
-                          itemBuilder: (_, i) =>
-                              _appear(i, _collegeCard(list[i])),
-                        ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+                sliver: SliverList.separated(
+                  itemCount: list.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (_, i) => _appear(i, _listCard(list[i], i)),
                 ),
-              ],
-            ),
+              ),
           ],
         ),
       ),
@@ -133,150 +219,156 @@ class _CollegesScreenState extends State<CollegesScreen> {
         ? [const Color(0xFF021F26), const Color(0xFF05505F)]
         : [_cyberTeal, const Color(0xFF0A6475)];
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: double.infinity,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-              colors: colors,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 30),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: double.infinity,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: colors,
+              ),
+              borderRadius:
+                  const BorderRadius.vertical(bottom: Radius.circular(36)),
             ),
-            borderRadius:
-                const BorderRadius.vertical(bottom: Radius.circular(32)),
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                left: -40,
-                top: -30,
-                child: _circle(150, _aquaFoam.withAlpha(22)),
-              ),
-              Positioned(
-                right: -25,
-                bottom: -50,
-                child: _circle(120, _aquaFoam.withAlpha(16)),
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(12, top + 8, 20, 52),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(Icons.arrow_back_ios_new,
-                          color: _aquaFoam, size: 22),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'الكليات',
-                            style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '$count كلية • جامعة مؤتة',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: _aquaFoam.withAlpha(220),
-                            ),
-                          ),
-                        ],
+            child: Stack(
+              children: [
+                // معلم الجامعة كعلامة مائية
+                Positioned(
+                  left: -30,
+                  bottom: -26,
+                  child: Icon(
+                    Icons.account_balance_outlined,
+                    size: 190,
+                    color: _aquaFoam.withAlpha(20),
+                  ),
+                ),
+                Positioned(
+                  right: -50,
+                  top: -60,
+                  child: _circle(190, _aquaFoam.withAlpha(16)),
+                ),
+                Positioned(
+                  left: 80,
+                  top: 30,
+                  child: _circle(36, _aquaFoam.withAlpha(22)),
+                ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(12, top + 8, 16, 62),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _glassBtn(
+                        child: const Icon(Icons.arrow_back_ios_new,
+                            color: _aquaFoam, size: 20),
+                        onTap: () => Navigator.of(context).maybePop(),
                       ),
-                    ),
-                    Material(
-                      color: _aquaFoam.withAlpha(30),
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: _toggleTheme,
+                      const SizedBox(width: 12),
+                      Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            transitionBuilder: (child, anim) =>
-                                RotationTransition(turns: anim, child: child),
-                            child: Icon(
-                              _isDark
-                                  ? Icons.light_mode_outlined
-                                  : Icons.dark_mode_outlined,
-                              key: ValueKey(_isDark),
-                              color: _aquaFoam,
-                              size: 26,
-                            ),
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'الكليات',
+                                style: TextStyle(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'استكشف كليات جامعة مؤتة',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: _aquaFoam.withAlpha(215),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        Positioned(
-          left: 20,
-          right: 20,
-          bottom: -26,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(_isDark ? 90 : 35),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
+                    ],
+                  ),
                 ),
               ],
             ),
-            child: TextField(
-              controller: _search,
-              style: TextStyle(color: _title),
-              textDirection: TextDirection.rtl,
-              textInputAction: TextInputAction.search,
-              onChanged: (v) => setState(() => _query = v),
-              decoration: InputDecoration(
-                hintText: 'ابحث باسم الكلية أو رقم المبنى...',
-                hintStyle: TextStyle(color: _sub, fontSize: 14),
-                prefixIcon: Icon(Icons.search_rounded, color: _title),
-                suffixIcon: _query.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: Icon(Icons.close_rounded, color: _sub),
-                        onPressed: () {
-                          _search.clear();
-                          setState(() => _query = '');
-                        },
-                      ),
-                filled: true,
-                fillColor: _surface,
-                contentPadding: const EdgeInsets.symmetric(vertical: 18),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(color: _title, width: 1.4),
+          ),
+          // البحث العائم
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: -26,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: [
+                  BoxShadow(
+                    color: _shadow,
+                    blurRadius: 22,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _search,
+                style: TextStyle(color: _title),
+                textDirection: TextDirection.rtl,
+                textInputAction: TextInputAction.search,
+                onChanged: (v) => setState(() => _query = v),
+                decoration: InputDecoration(
+                  hintText: 'ابحث باسم الكلية أو رقم المبنى...',
+                  hintStyle: TextStyle(color: _sub, fontSize: 14),
+                  prefixIcon: Icon(Icons.search_rounded, color: _title),
+                  suffixIcon: _query.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: Icon(Icons.close_rounded, color: _sub),
+                          onPressed: () {
+                            _search.clear();
+                            setState(() => _query = '');
+                          },
+                        ),
+                  filled: true,
+                  fillColor: _surface,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 18),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(22),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(22),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(22),
+                    borderSide: BorderSide(color: _title, width: 1.4),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  Widget _glassBtn({required Widget child, required VoidCallback onTap}) {
+    return Material(
+      color: _aquaFoam.withAlpha(30),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Padding(padding: const EdgeInsets.all(11), child: child),
+      ),
     );
   }
 
@@ -286,103 +378,422 @@ class _CollegesScreenState extends State<CollegesScreen> {
         decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       );
 
-  // ====================== كرت الكلية ======================
-  Widget _collegeCard(College c) {
-    return Material(
-      color: _surface.withAlpha(_isDark ? 225 : 235),
-      borderRadius: BorderRadius.circular(22),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: () => _openCollege(c),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: _border),
-          ),
-          child: Row(
-            children: [
-              // أيقونة الكلية
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: _tileBg,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(c.icon, size: 28, color: _title),
+  // ====================== الإحصائيات ======================
+  Widget _buildStats(int shown) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
+      child: SizedBox(
+        height: 112, // ارتفاع ثابت لكل الكروت
+        child: Row(
+          children: [
+            Expanded(
+              child: _statTile(
+                Icons.school_outlined,
+                'كلية',
+                animateTo: colleges.length,
               ),
-              const SizedBox(width: 14),
+            ),
+            const SizedBox(width: 10),
+            // كرت المبنى ثابت: نص مباشر بدون أنيميشن
+            Expanded(
+              child: _statTile(
+                Icons.apartment_rounded,
+                'مبنى',
+                text: '20+',
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _statTile(
+                Icons.filter_list_rounded,
+                'نتيجة',
+                animateTo: shown,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-              // الأسماء
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+  /// إذا [animateTo] موجود الرقم بيعدّ بأنيميشن، وإلا بيعرض [text] ثابت.
+  Widget _statTile(
+    IconData icon,
+    String label, {
+    int? animateTo,
+    String text = '',
+  }) {
+    final numberStyle = TextStyle(
+      color: _title,
+      fontSize: 20,
+      fontWeight: FontWeight.w800,
+    );
+
+    return Container(
+      width: double.infinity,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: _surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _border),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(color: _tileBg, shape: BoxShape.circle),
+            child: Icon(icon, size: 18, color: _title),
+          ),
+          const SizedBox(height: 8),
+          if (animateTo != null)
+            TweenAnimationBuilder<int>(
+              key: ValueKey('$label$animateTo'),
+              tween: IntTween(begin: 0, end: animateTo),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutCubic,
+              builder: (_, v, __) => Text('$v', style: numberStyle),
+            )
+          else
+            Directionality(
+              textDirection: TextDirection.ltr, // عشان تظهر 20+ مظبوطة
+              child: Text(text, style: numberStyle),
+            ),
+          Text(label, style: TextStyle(color: _sub, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  // ====================== الترتيب + نمط العرض ======================
+  Widget _buildControls() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+      child: Row(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _chip('الكل', _Sort.normal, Icons.apps_rounded),
+                  const SizedBox(width: 8),
+                  _chip('أبجدي', _Sort.name, Icons.sort_by_alpha_rounded),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: _surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _border),
+            ),
+            child: Row(
+              children: [
+                _viewBtn(Icons.grid_view_rounded, true),
+                _viewBtn(Icons.view_agenda_outlined, false),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(String label, _Sort s, IconData icon) {
+    final on = _sort == s;
+    final fg = on ? (_isDark ? _cyberTeal : _aquaFoam) : _title;
+    return GestureDetector(
+      onTap: () => setState(() => _sort = s),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: on ? (_isDark ? _aquaFoam : _cyberTeal) : _surface,
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: on ? Colors.transparent : _border),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: fg),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: fg,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _viewBtn(IconData icon, bool gridMode) {
+    final on = _grid == gridMode;
+    return GestureDetector(
+      onTap: () => setState(() => _grid = gridMode),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.all(7),
+        decoration: BoxDecoration(
+          color: on ? _tileBg : Colors.transparent,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Icon(icon, size: 19, color: on ? _title : _sub),
+      ),
+    );
+  }
+
+  // ====================== الجزء المرئي (صورة / تدرج) ======================
+  Widget _visual(College c, int i, {required double iconSize}) {
+    final g = _grads[i % _grads.length];
+    final photo = c.imagePath ?? _photos[c.nameAr];
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (photo != null)
+          Image.asset(
+            photo,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _gradBox(g),
+          )
+        else
+          _gradBox(g),
+        // طبقة تعتيم خفيفة لتوضيح الأيقونة فوق الصورة
+        if (photo != null)
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Colors.black.withAlpha(90)],
+              ),
+            ),
+          ),
+        if (photo == null) ...[
+          Positioned(
+            left: -iconSize * 0.25,
+            bottom: -iconSize * 0.3,
+            child: Icon(
+              c.icon,
+              size: iconSize * 2.2,
+              color: _aquaFoam.withAlpha(30),
+            ),
+          ),
+          Positioned(
+            right: -14,
+            top: -14,
+            child: _circle(60, _aquaFoam.withAlpha(20)),
+          ),
+        ],
+        Center(
+          child: Container(
+            width: iconSize + 22,
+            height: iconSize + 22,
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(photo == null ? 28 : 60),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withAlpha(90), width: 1.2),
+            ),
+            child: Icon(c.icon, size: iconSize, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _gradBox(List<Color> g) => DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+            colors: g,
+          ),
+        ),
+      );
+
+  // ====================== كرت الشبكة ======================
+  Widget _gridCard(College c, int i) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [
+          BoxShadow(color: _shadow, blurRadius: 16, offset: const Offset(0, 6)),
+        ],
+      ),
+      child: Material(
+        color: _surface,
+        borderRadius: BorderRadius.circular(26),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _openCollege(c),
+          child: Column(
+            children: [
+              SizedBox(
+                height: 108,
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    Text(
-                      c.nameAr,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: _title,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Directionality(
-                      textDirection: TextDirection.ltr,
-                      child: Text(
-                        c.nameEn,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: _sub, fontSize: 12),
-                      ),
+                    _visual(c, i, iconSize: 28),
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: _favBtn(c, onImage: true),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-
-              // شارة رقم المبنى (نفس لون دبابيس الخريطة)
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: _mapMaroon,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _mapMaroon.withAlpha(90),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        c.nameAr,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: _title,
+                          fontSize: 14.5,
+                          height: 1.25,
+                          fontWeight: FontWeight.w800,
                         ),
-                      ],
-                    ),
-                    child: Text(
-                      '${c.building}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
                       ),
-                    ),
+                      const SizedBox(height: 3),
+                      Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Text(
+                            c.nameEn,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: _sub, fontSize: 11),
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      Row(
+                        children: [
+                          Text(
+                            'تصفح تفاصيل الكلية',
+                            style: TextStyle(
+                              color: _title,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: _tileBg,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.arrow_back_rounded,
+                                size: 16, color: _title),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'مبنى',
-                    style: TextStyle(color: _sub, fontSize: 11),
-                  ),
-                ],
+                ),
               ),
-              const SizedBox(width: 6),
-              Icon(Icons.chevron_left_rounded, color: _sub),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ====================== كرت القائمة ======================
+  Widget _listCard(College c, int i) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(color: _shadow, blurRadius: 14, offset: const Offset(0, 5)),
+        ],
+      ),
+      child: Material(
+        color: _surface,
+        borderRadius: BorderRadius.circular(24),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _openCollege(c),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: SizedBox(
+                    width: 92,
+                    height: 92,
+                    child: _visual(c, i, iconSize: 26),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        c.nameAr,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: _title,
+                          fontSize: 16,
+                          height: 1.25,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Text(
+                          c.nameEn,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: _sub, fontSize: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'تصفح تفاصيل الكلية',
+                        style: TextStyle(
+                          color: _title,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 92,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _favBtn(c, onImage: false),
+                      Icon(Icons.chevron_left_rounded, color: _sub),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -414,108 +825,4 @@ class _CollegesScreenState extends State<CollegesScreen> {
       ),
     );
   }
-}
-
-// ====================== رسّام الخلفية ======================
-class _BgPainter extends CustomPainter {
-  final bool isDark;
-  const _BgPainter({required this.isDark});
-
-  static const Color _teal = Color(0xFF03303B);
-  static const Color _aqua = Color(0xFF96FCDF);
-  static const Color _maroon = Color(0xFF8A1538);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final rect = Offset.zero & size;
-
-    // 1) الخلفية الأساسية (تدرج)
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: isDark
-              ? const [Color(0xFF01181E), Color(0xFF032B35), Color(0xFF01181E)]
-              : [
-                  const Color(0xFFF2FFFB),
-                  _aqua.withAlpha(60),
-                  const Color(0xFFF2FFFB),
-                ],
-        ).createShader(rect),
-    );
-
-    // 2) توهج دائري بلون Aqua Foam
-    void glow(Offset c, double r, int alpha) {
-      canvas.drawCircle(
-        c,
-        r,
-        Paint()
-          ..shader = RadialGradient(
-            colors: [_aqua.withAlpha(alpha), _aqua.withAlpha(0)],
-          ).createShader(Rect.fromCircle(center: c, radius: r)),
-      );
-    }
-
-    glow(Offset(w * 0.05, h * 0.30), w * 0.7, isDark ? 40 : 90);
-    glow(Offset(w * 0.95, h * 0.85), w * 0.8, isDark ? 32 : 80);
-
-    // 3) شبكة نقاط (إحساس الخريطة)
-    final dot = Paint()
-      ..color = isDark ? _aqua.withAlpha(24) : _teal.withAlpha(20);
-    const gap = 28.0;
-    for (double x = gap / 2; x < w; x += gap) {
-      for (double y = gap / 2; y < h; y += gap) {
-        canvas.drawCircle(Offset(x, y), 1.2, dot);
-      }
-    }
-
-    // 4) حلقات رادار (موقعك)
-    final ring = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..color = isDark ? _aqua.withAlpha(26) : _teal.withAlpha(24);
-    final rc = Offset(w * 0.92, h * 0.80);
-    for (double r = 60; r <= 300; r += 60) {
-      canvas.drawCircle(rc, r, ring);
-    }
-
-    // 5) مسار ملاحة متقطع ينتهي بدبوس
-    final path = Path()
-      ..moveTo(-20, h * 0.38)
-      ..cubicTo(w * 0.30, h * 0.30, w * 0.40, h * 0.62, w * 0.70, h * 0.58)
-      ..cubicTo(w * 0.85, h * 0.56, w * 0.90, h * 0.70, w * 0.92, h * 0.80);
-
-    final dash = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.2
-      ..strokeCap = StrokeCap.round
-      ..color = isDark ? _aqua.withAlpha(60) : _teal.withAlpha(50);
-
-    for (final m in path.computeMetrics()) {
-      double d = 0;
-      while (d < m.length) {
-        canvas.drawPath(m.extractPath(d, d + 9), dash);
-        d += 18;
-      }
-    }
-
-    // دبوس الوجهة
-    canvas.drawCircle(rc, 11, Paint()..color = _maroon.withAlpha(50));
-    canvas.drawCircle(rc, 5.5, Paint()..color = _maroon.withAlpha(190));
-    canvas.drawCircle(
-      rc,
-      5.5,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = Colors.white.withAlpha(isDark ? 160 : 230),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _BgPainter old) => old.isDark != isDark;
 }
