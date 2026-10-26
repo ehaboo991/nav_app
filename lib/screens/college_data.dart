@@ -28,7 +28,7 @@ const List<College> colleges = [
   College(
     nameAr: 'كلية الهندسة',
     nameEn: 'Faculty of Engineering',
-    icon: Icons.engineering_outlined,
+    icon: Icons.engineering_outlined,   
     building: 0,
   ),
   College(
@@ -61,12 +61,7 @@ const List<College> colleges = [
     icon: Icons.science_outlined,
     building: 0,
   ),
-  College(
-    nameAr: 'كلية الزراعة',
-    nameEn: 'Faculty of Agriculture',
-    icon: Icons.park_outlined,
-    building: 0,
-  ),
+ 
   College(
     nameAr: 'كلية الآداب',
     nameEn: 'Faculty of Arts',
@@ -98,23 +93,12 @@ const List<College> colleges = [
     building: 0,
   ),
   College(
-    nameAr: 'كلية العلوم الاجتماعية',
-    nameEn: 'Faculty of Social Sciences',
-    icon: Icons.diversity_3_outlined,
-    building: 0,
-  ),
-  College(
     nameAr: 'كلية الصيدلة',
     nameEn: 'Faculty of Pharmacy',
     icon: Icons.medication_outlined,
     building: 0,
   ),
-  College(
-    nameAr: 'كلية التمريض',
-    nameEn: 'Faculty of Nursing',
-    icon: Icons.health_and_safety_outlined,
-    building: 0,
-  ),
+ 
   College(
     nameAr: 'كلية الحقوق',
     nameEn: 'Faculty of Law',

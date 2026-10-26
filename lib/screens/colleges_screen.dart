@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'college_data.dart';
 import 'favourite_screen.dart';
 import 'it_college_screen.dart';
-
+import 'engineering_screen.dart';
+import 'science2 .dart'; // صفحة كلية العلوم 2
 
 const Color _cyberTeal = Color(0xFF03303B);
 const Color _aquaFoam = Color(0xFF96FCDF);
@@ -20,6 +21,13 @@ const List<List<Color>> _grads = [
   [Color(0xFF0A6475), Color(0xFF1FA39A)],
   [Color(0xFF05505F), Color(0xFF2A7F85)],
   [Color(0xFF042A33), Color(0xFF0B7F88)],
+];
+
+/// الكليات المخفية من الشاشة (بتنحذف أي كلية اسمها فيه وحدة من هالكلمات).
+const List<String> _hiddenKeywords = [
+  'الزراعة',
+  'التمريض',
+  'الاجتماعية',
 ];
 
 enum _Sort { normal, name }
@@ -56,11 +64,16 @@ class _CollegesScreenState extends State<CollegesScreen> {
       _isDark ? _aquaFoam.withAlpha(28) : _aquaFoam.withAlpha(85);
   Color get _shadow => Colors.black.withAlpha(_isDark ? 80 : 22);
 
+  /// الكليات بعد استبعاد المخفية.
+  List<College> get _visible => colleges
+      .where((c) => !_hiddenKeywords.any((k) => c.nameAr.contains(k)))
+      .toList();
+
   List<College> get _filtered {
     final q = _query.trim().toLowerCase();
     var list = q.isEmpty
-        ? List<College>.of(colleges)
-        : colleges.where((c) {
+        ? List<College>.of(_visible)
+        : _visible.where((c) {
             return c.nameAr.contains(q) ||
                 c.nameEn.toLowerCase().contains(q) ||
                 c.building.toString() == q;
@@ -77,18 +90,29 @@ class _CollegesScreenState extends State<CollegesScreen> {
   }
 
   void _openCollege(College c) {
-    if (c.nameAr == 'كلية تكنولوجيا المعلومات') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const ItCollegeDetailsPage(),
-        ),
-      );
+    // تحويل الأرقام العربية لإنجليزية وإزالة المسافات الزايدة
+    final name = c.nameAr
+        .replaceAll('٢', '2')
+        .replaceAll('١', '1')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+    debugPrint('Tapped college: "$name" (building ${c.building})');
+
+    Widget? page;
+    if (name == 'كلية تكنولوجيا المعلومات') {
+      page = const ItCollegeDetailsPage();
+    } else if (name == 'كلية الهندسة') {
+      page = const EngineeringCollegeDetailsPage();
+    } else if (name.contains('العلوم') && name.contains('2')) {
+      page = const ScienceCollege2DetailsPage();
+    }
+
+    if (page != null) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => page!));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${c.nameAr} • مبنى ${c.building}'),
-        ),
+        SnackBar(content: Text('${c.nameAr} • مبنى ${c.building}')),
       );
     }
   }
@@ -390,7 +414,7 @@ class _CollegesScreenState extends State<CollegesScreen> {
               child: _statTile(
                 Icons.school_outlined,
                 'كلية',
-                animateTo: colleges.length,
+                animateTo: _visible.length,
               ),
             ),
             const SizedBox(width: 10),

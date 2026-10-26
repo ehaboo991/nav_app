@@ -2,48 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'map_viewer_screen.dart';
+import 'campus_map_screen.dart';
 import 'colleges_screen.dart';
 import 'favourite_screen.dart';
 import 'account_screen.dart';
-import 'start_navigation_screen.dart'; 
+import 'start_navigation_screen.dart';
+import 'nav_ai_screen.dart';
 
 const Color cyberTeal = Color(0xFF03303B);
 const Color aquaFoam = Color(0xFF96FCDF);
 
-/// حالة الثيم العامة (تُستخدم في main.dart)
 final ValueNotifier<ThemeMode> themeNotifier =
     ValueNotifier(ThemeMode.light);
 
-/// لوحة الألوان (كلها مشتقة من Cyber Teal و Aqua Foam)
-/// كل لون إله قيمة للوضع الفاتح وقيمة للوضع الداكن، وبتتغير مع زر التبديل.
 class _Pal {
   final bool dark;
   const _Pal(this.dark);
 
-  // الخلفيات والكروت
   Color get bg => dark ? const Color(0xFF01181E) : const Color(0xFFF2FFFB);
   Color get surface => dark ? const Color(0xFF042A33) : Colors.white;
   Color get actionBg => dark ? const Color(0xFF053844) : const Color(0xFFE9FFF9);
   Color get mapBox => dark ? const Color(0xFF053844) : aquaFoam.withAlpha(90);
   Color get border => dark ? const Color(0xFF0B5566) : aquaFoam;
 
-  // النصوص
   Color get title => dark ? aquaFoam : cyberTeal;
   Color get sub => dark ? aquaFoam.withAlpha(180) : const Color(0xFF2A7F85);
 
-  // الأيقونات الدائرية (الأفاتار)
   Color get avatarBg => dark ? aquaFoam : cyberTeal;
   Color get avatarFg => dark ? cyberTeal : aquaFoam;
 
-  // كرت الترحيب
   List<Color> get welcome => dark
       ? [cyberTeal, const Color(0xFF05505F)]
       : [aquaFoam.withAlpha(120), aquaFoam];
 
-  // شريط التنقل السفلي
   Color get bar => dark ? const Color(0xFF021F26) : cyberTeal;
-
-  // الرسائل (SnackBar)
   Color get snackBg => dark ? aquaFoam : cyberTeal;
   Color get snackFg => dark ? cyberTeal : aquaFoam;
 }
@@ -56,15 +48,16 @@ class HomePageScreen extends StatefulWidget {
 }
 
 class _HomePageScreenState extends State<HomePageScreen> {
-  // الترتيب المنطقي: 0 الرئيسية، 1 الخريطة، 2 المفضلة، 3 حسابي
   int selectedIndex = 0;
 
   final GlobalKey<CurvedNavigationBarState> _navKey = GlobalKey();
   final TextEditingController searchController = TextEditingController();
 
+  // 0 الرئيسية | 1 الخريطة | 2 NAV AI (بالنص) | 3 المفضلة | 4 حسابي
   static const List<_NavItem> _navItems = [
     _NavItem(Icons.home_rounded, 'الرئيسية'),
     _NavItem(Icons.map_rounded, 'الخريطة'),
+    _NavItem(Icons.auto_awesome, 'NAV AI'),
     _NavItem(Icons.star_rounded, 'المفضلة'),
     _NavItem(Icons.person_rounded, 'حسابي'),
   ];
@@ -93,24 +86,27 @@ class _HomePageScreenState extends State<HomePageScreen> {
     );
   }
 
-  // فتح شاشة الخريطة المكبّرة
+  // فتح شاشة الخريطة القديمة من بطاقة الخريطة في الصفحة الرئيسية
   void openMap() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const MapViewerScreen()),
+      MaterialPageRoute(
+        builder: (_) => const MapViewerScreen(),
+      ),
     );
   }
 
   void openNavigation() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const StartNavigationScreen()),
+      MaterialPageRoute(
+        builder: (_) => const StartNavigationScreen(),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // ألوان تتغير حسب الوضع (من مكان واحد: _Pal)
     final p = _Pal(isDark);
     final Color bg = p.bg;
     final Color surface = p.surface;
@@ -122,11 +118,12 @@ class _HomePageScreenState extends State<HomePageScreen> {
     final Color border = p.border;
     final Color actionBg = p.actionBg;
 
-    // شريط الحالة وشريط النظام السفلي بيتبعوا الوضع (أيقونات فاتحة/غامقة)
     final overlay = SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-      statusBarBrightness: isDark ? Brightness.dark : Brightness.light, // iOS
+      statusBarIconBrightness:
+          isDark ? Brightness.light : Brightness.dark,
+      statusBarBrightness:
+          isDark ? Brightness.dark : Brightness.light,
       systemNavigationBarColor: p.bar,
       systemNavigationBarIconBrightness: Brightness.light,
     );
@@ -134,314 +131,318 @@ class _HomePageScreenState extends State<HomePageScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlay,
       child: Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: bg,
-        body: IndexedStack(
-          // 0 الرئيسية (والخريطة) • 1 المفضلة • 2 حسابي
-          index: selectedIndex == 3 ? 2 : (selectedIndex == 2 ? 1 : 0),
-          sizing: StackFit.expand,
-          children: [
-            SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(20),
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          backgroundColor: bg,
+          body: IndexedStack(
+            // 0 رئيسية | 1 NAV AI | 2 مفضلة | 3 حسابي
+            index: const {0: 0, 2: 1, 3: 2, 4: 3}[selectedIndex] ?? 0,
+            sizing: StackFit.expand,
             children: [
-              // Header
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 27,
-                    backgroundColor: avatarBg,
-                    child:
-                        Icon(Icons.location_on, color: avatarFg, size: 32),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              SafeArea(
+                child: ListView(
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    Row(
                       children: [
-                        Text(
-                          'Mutah-Nav',
-                          style: TextStyle(
-                            fontSize: 25,
-                            fontWeight: FontWeight.bold,
-                            color: title,
+                        CircleAvatar(
+                          radius: 27,
+                          backgroundColor: avatarBg,
+                          child: Icon(
+                            Icons.location_on,
+                            color: avatarFg,
+                            size: 32,
                           ),
                         ),
-                        Text(
-                          'Your Campus, Your Way',
-                          style: TextStyle(color: sub),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Mutah-Nav',
+                                style: TextStyle(
+                                  fontSize: 25,
+                                  fontWeight: FontWeight.bold,
+                                  color: title,
+                                ),
+                              ),
+                              Text(
+                                'Your Campus, Your Way',
+                                style: TextStyle(color: sub),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: isDark ? 'الوضع الفاتح' : 'الوضع الداكن',
+                          onPressed: toggleTheme,
+                          icon: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            transitionBuilder: (child, anim) =>
+                                RotationTransition(
+                              turns: anim,
+                              child: child,
+                            ),
+                            child: Icon(
+                              isDark
+                                  ? Icons.light_mode_outlined
+                                  : Icons.dark_mode_outlined,
+                              key: ValueKey(isDark),
+                              color: title,
+                              size: 28,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () =>
+                              showMessage('لا توجد إشعارات جديدة'),
+                          icon: Icon(
+                            Icons.notifications_none,
+                            color: title,
+                            size: 28,
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                  // زر تبديل الوضع
-                  IconButton(
-                    tooltip: isDark ? 'الوضع الفاتح' : 'الوضع الداكن',
-                    onPressed: toggleTheme,
-                    icon: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      transitionBuilder: (child, anim) =>
-                          RotationTransition(turns: anim, child: child),
-                      child: Icon(
-                        isDark
-                            ? Icons.light_mode_outlined
-                            : Icons.dark_mode_outlined,
-                        key: ValueKey(isDark),
-                        color: title,
-                        size: 28,
+                    const SizedBox(height: 25),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(22),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: p.welcome),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'مرحباً بعودتك 👋',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: title,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'وين حاب تروح اليوم؟',
+                            style: TextStyle(
+                              fontSize: 17,
+                              color: title,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                  IconButton(
-                    onPressed: () => showMessage('لا توجد إشعارات جديدة'),
-                    icon: Icon(Icons.notifications_none,
-                        color: title, size: 28),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 25),
-
-              // Welcome card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(22),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: p.welcome),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: searchController,
+                      style: TextStyle(color: title),
+                      textDirection: TextDirection.rtl,
+                      textAlign: TextAlign.start,
+                      keyboardType: TextInputType.text,
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: (value) {
+                        if (value.trim().isNotEmpty) {
+                          showMessage('بحث عن: $value');
+                        }
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'ابحث عن قاعة أو مبنى...',
+                        hintStyle: TextStyle(color: sub),
+                        prefixIcon: Icon(Icons.search, color: title),
+                        filled: true,
+                        fillColor: surface,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide(color: border),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide(color: border),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide(
+                            color: title,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 25),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: surface,
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.map_outlined,
+                                color: title,
+                                size: 28,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'خريطة الجامعة',
+                                style: TextStyle(
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.bold,
+                                  color: title,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          GestureDetector(
+                            onTap: openMap,
+                            child: Hero(
+                              tag: 'Mutah_Map',
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(18),
+                                child: SizedBox(
+                                  height: 190,
+                                  width: double.infinity,
+                                  child: Image.asset(
+                                    'image/Mutah_Map.png',
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => Container(
+                                      color: mapBox,
+                                      alignment: Alignment.center,
+                                      child: Icon(
+                                        Icons.map_outlined,
+                                        size: 65,
+                                        color: title,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton(
+                              onPressed: openMap,
+                              child: Text(
+                                'استكشف الخريطة ←',
+                                style: TextStyle(color: title),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 25),
                     Text(
-                      'مرحباً بعودتك 👋',
+                      'الوصول السريع',
                       style: TextStyle(
-                        fontSize: 24,
+                        fontSize: 21,
                         fontWeight: FontWeight.bold,
                         color: title,
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'وين حاب تروح اليوم؟',
-                      style: TextStyle(fontSize: 17, color: title),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Search field
-              TextField(
-                controller: searchController,
-                style: TextStyle(color: title),
-                textDirection: TextDirection.rtl,
-                textAlign: TextAlign.start,
-                keyboardType: TextInputType.text,
-                textInputAction: TextInputAction.search,
-                onSubmitted: (value) {
-                  if (value.trim().isNotEmpty) {
-                    showMessage('بحث عن: $value');
-                  }
-                },
-                decoration: InputDecoration(
-                  hintText: 'ابحث عن قاعة أو مبنى...',
-                  hintStyle: TextStyle(color: sub),
-                  prefixIcon: Icon(Icons.search, color: title),
-                  filled: true,
-                  fillColor: surface,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: BorderSide(color: border),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: BorderSide(color: border),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: BorderSide(color: title, width: 1.5),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 25),
-
-              // mutah map card
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: surface,
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: border),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+                    const SizedBox(height: 15),
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 14,
+                      mainAxisSpacing: 14,
+                      childAspectRatio: 1.15,
                       children: [
-                        Icon(Icons.map_outlined, color: title, size: 28),
-                        const SizedBox(width: 10),
-                        Text(
-                          'خريطة الجامعة',
-                          style: TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.bold,
-                            color: title,
+                        _actionCard(
+                          Icons.navigation,
+                          'ابدأ الملاحة',
+                          'الوصول إلى وجهتك',
+                          openNavigation,
+                          actionBg,
+                          border,
+                          avatarBg,
+                          avatarFg,
+                          title,
+                          sub,
+                        ),
+                        _actionCard(
+                          Icons.apartment,
+                          'الكليات',
+                          'تصفح كليات الجامعة',
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CollegesScreen(),
+                            ),
                           ),
+                          actionBg,
+                          border,
+                          avatarBg,
+                          avatarFg,
+                          title,
+                          sub,
+                        ),
+                        _actionCard(
+                          Icons.bookmark_border,
+                          'المفضلة',
+                          'أماكنك المحفوظة',
+                          () => _goToTab(3),
+                          actionBg,
+                          border,
+                          avatarBg,
+                          avatarFg,
+                          title,
+                          sub,
+                        ),
+                        _actionCard(
+                          Icons.person_outline,
+                          'حسابي',
+                          'إعدادات المستخدم',
+                          () => _goToTab(4),
+                          actionBg,
+                          border,
+                          avatarBg,
+                          avatarFg,
+                          title,
+                          sub,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
-
-                    // صورة الخريطة (بتفتح الخريطة المكبّرة عند الضغط)
-                    GestureDetector(
-                      onTap: openMap,
-                      child: Hero(
-                        tag: 'Mutah_Map',
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(18),
-                          child: SizedBox(
-                            height: 190,
-                            width: double.infinity,
-                            child: Image.asset(
-                              'image/Mutah_Map.png',
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Container(
-                                color: mapBox,
-                                alignment: Alignment.center,
-                                child: Icon(Icons.map_outlined,
-                                    size: 65, color: title),
-                              ),
-                            ),
-                          ),
+                    const SizedBox(height: 25),
+                    Center(
+                      child: Text(
+                        'Mutah University',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: sub,
+                          fontStyle: FontStyle.italic,
                         ),
                       ),
                     ),
-
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton(
-                        onPressed: openMap,
-                        child: Text(
-                          'استكشف الخريطة ←',
-                          style: TextStyle(color: title),
-                        ),
-                      ),
-                    ),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
-
-              const SizedBox(height: 25),
-
-              Text(
-                'الوصول السريع',
-                style: TextStyle(
-                  fontSize: 21,
-                  fontWeight: FontWeight.bold,
-                  color: title,
-                ),
-              ),
-
-              const SizedBox(height: 15),
-
-              // Quick actions
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 1.15,
-                children: [
-                  _actionCard(
-                      Icons.navigation,
-                      'ابدأ الملاحة',
-                      'الوصول إلى وجهتك',
-                      openNavigation,
-                      actionBg,
-                      border,
-                      avatarBg,
-                      avatarFg,
-                      title,
-                      sub),
-                  _actionCard(
-                      Icons.apartment,
-                      'الكليات',
-                      'تصفح كليات الجامعة',
-                      () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const CollegesScreen()),
-                          ),
-                      actionBg,
-                      border,
-                      avatarBg,
-                      avatarFg,
-                      title,
-                      sub),
-                  _actionCard(
-                      Icons.bookmark_border,
-                      'المفضلة',
-                      'أماكنك المحفوظة',
-                      () => _goToTab(2),
-                      actionBg,
-                      border,
-                      avatarBg,
-                      avatarFg,
-                      title,
-                      sub),
-                  _actionCard(
-                      Icons.person_outline,
-                      'حسابي',
-                      'إعدادات المستخدم',
-                      () => _goToTab(3),
-                      actionBg,
-                      border,
-                      avatarBg,
-                      avatarFg,
-                      title,
-                      sub),
-                ],
-              ),
-
-              const SizedBox(height: 25),
-
-              Center(
-                child: Text(
-                  'Mutah University',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: sub,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
+              // NAV AI: دايماً موجود بالـ IndexedStack عشان المحادثة ما تنمسح
+              const NavAiScreen(embedded: true),
+              selectedIndex == 3
+                  ? const FavoritesScreen(embedded: true)
+                  : const SizedBox.shrink(),
+              selectedIndex == 4
+                  ? AccountScreen(
+                      embedded: true,
+                      onOpenFavorites: () => _goToTab(3),
+                    )
+                  : const SizedBox.shrink(),
             ],
           ),
+          bottomNavigationBar: _buildNavBar(bg),
         ),
-            // تاب المفضلة (الـ nav bar بيضل ظاهر)
-            // بنبنيه بس لما يكون مفتوح عشان أنيميشن الدخول يشتغل كل مرة
-            selectedIndex == 2
-                ? const FavoritesScreen(embedded: true)
-                : const SizedBox.shrink(),
-            // تاب حسابي (الـ nav bar بيضل ظاهر)
-            selectedIndex == 3
-                ? AccountScreen(
-                    embedded: true,
-                    onOpenFavorites: () => _goToTab(2),
-                  )
-                : const SizedBox.shrink(),
-          ],
-        ),
-
-        // ====================== Curved Bottom Navigation ======================
-        bottomNavigationBar: _buildNavBar(bg),
-      ),
       ),
     );
   }
@@ -450,17 +451,15 @@ class _HomePageScreenState extends State<HomePageScreen> {
     final int last = _navItems.length - 1;
     final Color barColor = _Pal(isDark).bar;
 
-    // الشريط بيشتغل LTR داخلياً، فبنعكس الترتيب عشان يطلع صح بالـ RTL
-    // (الرئيسية عاليمين). index بالشريط = last - الترتيب المنطقي.
     final visualItems = List<Widget>.generate(_navItems.length, (v) {
       final logical = last - v;
       final item = _navItems[logical];
       final selected = logical == selectedIndex;
 
-      // الأيقونة المختارة بتطلع جوا الدائرة الفاتحة، فبتكون غامقة وبدون كلمة
       if (selected) {
         return Icon(item.icon, size: 28, color: cyberTeal);
       }
+
       return Column(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
@@ -488,7 +487,7 @@ class _HomePageScreenState extends State<HomePageScreen> {
         items: visualItems,
         color: barColor,
         buttonBackgroundColor: aquaFoam,
-        backgroundColor: pageBg, // نفس خلفية الصفحة عشان الانحناءة تندمج
+        backgroundColor: pageBg,
         animationCurve: Curves.easeInOut,
         animationDuration: const Duration(milliseconds: 500),
         letIndexChange: _letIndexChange,
@@ -499,15 +498,25 @@ class _HomePageScreenState extends State<HomePageScreen> {
 
   bool _letIndexChange(int index) => true;
 
+  // الخريطة (1) بس بتفتح كصفحة مستقلة، وNAV AI (2) تاب عادي
   void _onNavTap(int visualIndex) {
     final int logical = (_navItems.length - 1) - visualIndex;
+
+    if (logical == 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CampusMapScreen()),
+      );
+
+      // نرجع الشريط للتاب اللي كان مفتوح قبل الخريطة
+      _navKey.currentState
+          ?.setPage((_navItems.length - 1) - selectedIndex);
+      return;
+    }
+
     setState(() => selectedIndex = logical);
-    // 0 الرئيسية • 2 المفضلة • 3 حسابي: بيتبدّل التاب تلقائياً من selectedIndex
-    // 1 الخريطة: بدون رسالة (الشريط اللي كان يطلع انشال)
   }
 
-  /// بتنقل لتاب معيّن (الترتيب المنطقي: 0 الرئيسية، 1 الخريطة، 2 المفضلة، 3 حسابي)
-  /// وبتحرّك الـ nav bar معاها.
   void _goToTab(int logical) {
     _navKey.currentState?.setPage((_navItems.length - 1) - logical);
   }
@@ -571,5 +580,6 @@ class _HomePageScreenState extends State<HomePageScreen> {
 class _NavItem {
   final IconData icon;
   final String label;
+
   const _NavItem(this.icon, this.label);
 }
