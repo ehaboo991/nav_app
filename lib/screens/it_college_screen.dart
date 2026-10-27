@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'image_viewer.dart';
+
 const Color _cyberTeal = Color(0xFF03303B);
 const Color _aquaFoam = Color(0xFF96FCDF);
 
@@ -8,7 +8,7 @@ const Color _aquaFoam = Color(0xFF96FCDF);
 const String _collegeImage = 'image/it .png';
 
 // ====================== نموذج البيانات ======================
-enum _HallType { hall, lab, office, service }
+enum _HallType { hall, lab, office, service, controlRoom }
 
 extension on _HallType {
   IconData get icon {
@@ -21,6 +21,8 @@ extension on _HallType {
         return Icons.badge_rounded;
       case _HallType.service:
         return Icons.room_service_rounded;
+      case _HallType.controlRoom:
+        return Icons.settings_input_component_rounded;
     }
   }
 
@@ -34,6 +36,8 @@ extension on _HallType {
         return 'مكاتب';
       case _HallType.service:
         return 'خدمات';
+      case _HallType.controlRoom:
+        return 'Control Room';
     }
   }
 }
@@ -66,6 +70,13 @@ const List<_Floor> _floors = [
     _Hall('it-smart 201', _HallType.hall),
     _Hall('it-smart 202', _HallType.hall),
     _Hall('it-smart 203', _HallType.hall),
+    _Hall('قاعة الدراسات العليا 1', _HallType.hall,
+        icon: Icons.school_rounded),
+    _Hall('مختبر العوامل البشرية', _HallType.lab,
+        icon: Icons.accessibility_new_rounded),
+    _Hall('مختبر هندسة النظم الصناعية', _HallType.lab,
+        icon: Icons.precision_manufacturing_rounded),
+    _Hall('System Control', _HallType.controlRoom),
   ]),
   _Floor('الطابق الثالث', Icons.looks_3_rounded, [
     _Hall('it-lab 01', _HallType.lab),
@@ -91,6 +102,8 @@ const List<_Floor> _floors = [
     _Hall('WC بجانب المصلى', _HallType.service, icon: Icons.wc_rounded),
     _Hall('مختبر الامن السيبراني', _HallType.lab,
         icon: Icons.security_rounded),
+    _Hall('مركز أبحاث وتطوير الذكاء الاصطناعي', _HallType.lab,
+        icon: Icons.psychology_rounded),
   ]),
 ];
 
@@ -144,6 +157,35 @@ List<ItHallResult> searchItHalls(String query) {
     }
   }
   return out;
+}
+
+/// يعرض الصورة كاملة على الشاشة، وبالضغط على أي مكان بترجع للصفحة.
+void _showFullImage(BuildContext context, String assetPath) {
+  showDialog(
+    context: context,
+    useRootNavigator: true, // يفتحها فوق كل الشاشة
+    useSafeArea: false,
+    barrierColor: Colors.black,
+    builder: (ctx) => GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => Navigator.of(ctx).pop(), // أي ضغطة ترجّعك
+      child: SizedBox.expand(
+        child: InteractiveViewer(
+          minScale: 1,
+          maxScale: 4,
+          child: Image.asset(
+            assetPath,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const Icon(
+              Icons.broken_image_rounded,
+              color: Colors.white54,
+              size: 64,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 // ====================== الصفحة ======================
@@ -228,87 +270,106 @@ class _ItCollegeDetailsPageState extends State<ItCollegeDetailsPage> {
       decoration: const BoxDecoration(
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
       ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            _collegeImage,
-            fit: BoxFit.cover,
-            // الصورة طويلة وفيها سما كثير، فبنركّز على المبنى واللوحة
-            alignment: const Alignment(0, 0.3),
-            errorBuilder: (_, error, __) {
-              debugPrint('IT college image error: $error');
-              return const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
-                    colors: [Color(0xFF03303B), Color(0xFF0A6475)],
+      child: GestureDetector(
+        onTap: () => _showFullImage(context, _collegeImage),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              _collegeImage,
+              fit: BoxFit.cover,
+              // الصورة طويلة وفيها سما كثير، فبنركّز على المبنى واللوحة
+              alignment: const Alignment(0, 0.3),
+              errorBuilder: (_, error, __) {
+                debugPrint('IT college image error: $error');
+                return const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [Color(0xFF03303B), Color(0xFF0A6475)],
+                    ),
+                  ),
+                );
+              },
+            ),
+            // تعتيم لتوضيح النص
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withAlpha(60),
+                    _cyberTeal.withAlpha(215),
+                  ],
+                ),
+              ),
+            ),
+            // أيقونة تلمّح إن الصورة بتنفتح
+            Positioned(
+              top: top + 8,
+              left: 12,
+              child: IgnorePointer(
+                child: Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withAlpha(70),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.fullscreen_rounded,
+                      color: Colors.white, size: 20),
+                ),
+              ),
+            ),
+            Positioned(
+              top: top + 8,
+              right: 12,
+              child: Material(
+                color: _aquaFoam.withAlpha(40),
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => Navigator.of(context).maybePop(),
+                  child: const Padding(
+                    padding: EdgeInsets.all(11),
+                    child: Icon(Icons.arrow_back_ios_new,
+                        color: _aquaFoam, size: 20),
                   ),
                 ),
-              );
-            },
-          ),
-          // تعتيم لتوضيح النص
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withAlpha(60),
-                  _cyberTeal.withAlpha(215),
+              ),
+            ),
+            Positioned(
+              right: 20,
+              left: 20,
+              bottom: 22,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'كلية تكنولوجيا المعلومات',
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                      'Faculty of Information Technology',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: _aquaFoam.withAlpha(220),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
-          Positioned(
-            top: top + 8,
-            right: 12,
-            child: Material(
-              color: _aquaFoam.withAlpha(40),
-              shape: const CircleBorder(),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: () => Navigator.of(context).maybePop(),
-                child: const Padding(
-                  padding: EdgeInsets.all(11),
-                  child: Icon(Icons.arrow_back_ios_new,
-                      color: _aquaFoam, size: 20),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 20,
-            left: 20,
-            bottom: 22,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'كلية تكنولوجيا المعلومات',
-                  style: TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Text(
-                    'Faculty of Information Technology',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: _aquaFoam.withAlpha(220),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

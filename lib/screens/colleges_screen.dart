@@ -218,9 +218,9 @@ class _CollegesScreenState extends State<CollegesScreen> {
       );
   }
 
-  /// زر المفضلة. [onImage] = true لما يكون فوق صورة الكلية.
+  /// زر المفضلة (قلب). [onImage] = true لما يكون فوق صورة الكلية.
   Widget _favBtn(College c, {required bool onImage}) {
-    const gold = Color(0xFFFFC83D);
+    const heart = Color(0xFFFF4D6D);
     final bg = onImage ? Colors.black.withAlpha(95) : _tileBg;
     final off = onImage ? Colors.white : _title;
 
@@ -241,10 +241,10 @@ class _CollegesScreenState extends State<CollegesScreen> {
                 transitionBuilder: (child, anim) =>
                     ScaleTransition(scale: anim, child: child),
                 child: Icon(
-                  on ? Icons.star_rounded : Icons.star_border_rounded,
+                  on ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                   key: ValueKey(on),
                   size: 22,
-                  color: on ? gold : off,
+                  color: on ? heart : off,
                 ),
               ),
             ),
@@ -306,7 +306,7 @@ class _CollegesScreenState extends State<CollegesScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
                 sliver: SliverList.separated(
                   itemCount: list.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (_, i) => _appear(i, _listCard(list[i], i)),
                 ),
               ),
@@ -557,7 +557,7 @@ class _CollegesScreenState extends State<CollegesScreen> {
               tween: IntTween(begin: 0, end: animateTo),
               duration: const Duration(milliseconds: 800),
               curve: Curves.easeOutCubic,
-              builder: (_, v, __) => Text('$v', style: numberStyle),
+              builder: (_, v, _) => Text('$v', style: numberStyle),
             )
           else
             Directionality(
@@ -667,7 +667,7 @@ class _CollegesScreenState extends State<CollegesScreen> {
           Image.asset(
             photo,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _gradBox(g),
+            errorBuilder: (_, _, _) => _gradBox(g),
           )
         else
           _gradBox(g),

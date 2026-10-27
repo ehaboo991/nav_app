@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'image_viewer.dart';
+
 const Color _cyberTeal = Color(0xFF03303B);
 const Color _aquaFoam = Color(0xFF96FCDF);
 
@@ -78,6 +79,21 @@ class _EngineeringCollegeDetailsPageState
       _isDark ? _aquaFoam.withAlpha(28) : _aquaFoam.withAlpha(85);
   Color get _shadow => Colors.black.withAlpha(_isDark ? 80 : 22);
 
+  // ====================== فتح الصورة بملء الشاشة ======================
+  void _openFullImage(BuildContext context) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black,
+        transitionDuration: const Duration(milliseconds: 300),
+        reverseTransitionDuration: const Duration(milliseconds: 250),
+        pageBuilder: (_, __, ___) => const _FullImagePage(),
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final floor = _floors[_selected];
@@ -123,32 +139,41 @@ class _EngineeringCollegeDetailsPageState
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(
-            _collegeImage,
-            fit: BoxFit.cover,
-            errorBuilder: (_, error, __) {
-              debugPrint('Engineering college image error: $error');
-              return const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
-                    colors: [Color(0xFF03303B), Color(0xFF0A6475)],
-                  ),
-                ),
-              );
-            },
+          // الصورة (قابلة للضغط)
+          GestureDetector(
+            onTap: () => _openFullImage(context),
+            child: Hero(
+              tag: 'college_image',
+              child: Image.asset(
+                _collegeImage,
+                fit: BoxFit.cover,
+                errorBuilder: (_, error, __) {
+                  debugPrint('Engineering college image error: $error');
+                  return const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                        colors: [Color(0xFF03303B), Color(0xFF0A6475)],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
-          // تعتيم لتوضيح النص
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withAlpha(60),
-                  _cyberTeal.withAlpha(215),
-                ],
+          // تعتيم لتوضيح النص (IgnorePointer عشان الضغطة توصل للصورة)
+          IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withAlpha(60),
+                    _cyberTeal.withAlpha(215),
+                  ],
+                ),
               ),
             ),
           ),
@@ -173,29 +198,31 @@ class _EngineeringCollegeDetailsPageState
             right: 20,
             left: 20,
             bottom: 22,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'كلية الهندسة',
-                  style: TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Text(
-                    'Faculty of Engineering',
+            child: IgnorePointer(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'كلية الهندسة',
                     style: TextStyle(
-                      fontSize: 13,
-                      color: _aquaFoam.withAlpha(220),
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                      'Faculty of Engineering',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: _aquaFoam.withAlpha(220),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -335,6 +362,42 @@ class _EngineeringCollegeDetailsPageState
             color: _title,
             fontSize: 12.5,
             fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ====================== صفحة عرض الصورة كاملة ======================
+class _FullImagePage extends StatelessWidget {
+  const _FullImagePage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => Navigator.of(context).pop(),
+        child: SizedBox.expand(
+          child: Center(
+            child: Hero(
+              tag: 'college_image',
+              child: InteractiveViewer(
+                minScale: 1,
+                maxScale: 4,
+                child: Image.asset(
+                  _collegeImage,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.broken_image_rounded,
+                    color: Colors.white54,
+                    size: 64,
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'image_viewer.dart';
 
 const Color _cyberTeal = Color(0xFF03303B);
 const Color _aquaFoam = Color(0xFF96FCDF);
@@ -85,6 +84,49 @@ IconData _iconFor(String name) {
   return Icons.place_rounded;
 }
 
+/// يعرض الصورة كاملة على الشاشة، وبالضغط على أي مكان بترجع للصفحة.
+void _showFullImage(BuildContext context, String assetPath) {
+  Navigator.of(context).push(
+    PageRouteBuilder(
+      opaque: false,
+      barrierColor: Colors.black,
+      transitionDuration: const Duration(milliseconds: 250),
+      reverseTransitionDuration: const Duration(milliseconds: 250),
+      pageBuilder: (ctx, _, __) {
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => Navigator.of(ctx).pop(), // أي ضغطة ترجّعك
+          child: Scaffold(
+            backgroundColor: Colors.black,
+            body: SizedBox.expand(
+              child: Hero(
+                tag: assetPath,
+                child: InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 4,
+                  child: Center(
+                    child: Image.asset(
+                      assetPath,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.broken_image_rounded,
+                        color: Colors.white54,
+                        size: 64,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      transitionsBuilder: (_, anim, __, child) =>
+          FadeTransition(opacity: anim, child: child),
+    ),
+  );
+}
+
 class ScienceCollege1DetailsPage extends StatefulWidget {
   const ScienceCollege1DetailsPage({super.key});
 
@@ -167,17 +209,20 @@ class _ScienceCollege1DetailsPageState
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
       ),
       child: GestureDetector(
-        onTap: () => showFullImage(context, _heroImage),
+        onTap: () => _showFullImage(context, _heroImage),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.asset(
-              _heroImage,
-              fit: BoxFit.cover,
-              errorBuilder: (_, error, __) {
-                debugPrint('Science 1 college image error: $error');
-                return _gradBox();
-              },
+            Hero(
+              tag: _heroImage,
+              child: Image.asset(
+                _heroImage,
+                fit: BoxFit.cover,
+                errorBuilder: (_, error, __) {
+                  debugPrint('Science 1 college image error: $error');
+                  return _gradBox();
+                },
+              ),
             ),
             // تعتيم لتوضيح النص
             DecoratedBox(

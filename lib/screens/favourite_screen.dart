@@ -3,10 +3,11 @@ import 'college_data.dart';
 import 'colleges_screen.dart';
 import 'home_page_screens.dart' show themeNotifier;
 import 'it_college_screen.dart';
+import 'other_places_screen.dart' show favoritablePlaces, openPlace;
 
 const Color _cyberTeal = Color(0xFF03303B);
 const Color _aquaFoam = Color(0xFF96FCDF);
-const Color _gold = Color(0xFFFFC83D);
+const Color _heart = Color(0xFFFF4D6D);
 
 const List<List<Color>> _grads = [
   [Color(0xFF03303B), Color(0xFF0A6475)],
@@ -16,19 +17,38 @@ const List<List<Color>> _grads = [
 ];
 
 // ====================== مخزن المفضلة ======================
-/// الكليات المفضلة (بنخزّن اسم الكلية العربي كمفتاح).
-/// مشتركة بين شاشة الكليات وشاشة المفضلة.
+/// العناصر المفضلة (بنخزّن الاسم العربي كمفتاح): كليات + أماكن أخرى.
+/// مشتركة بين شاشة الكليات وشاشة الأماكن الأخرى وشاشة المفضلة.
 /// ملاحظة: محفوظة بالذاكرة بس، بتروح لما يتسكّر التطبيق.
 final ValueNotifier<Set<String>> favoritesNotifier =
     ValueNotifier<Set<String>>(<String>{});
 
-/// بتضيف الكلية للمفضلة أو بتشيلها. بترجّع true إذا انضافت.
+/// بتضيف العنصر للمفضلة أو بتشيله. بترجّع true إذا انضاف.
 bool toggleFavorite(String name) {
   final next = Set<String>.of(favoritesNotifier.value);
   final added = next.add(name);
   if (!added) next.remove(name);
   favoritesNotifier.value = next; // Set جديد عشان الـ listeners يتحدّثوا
   return added;
+}
+
+/// عنصر مفضل موحّد (كلية أو مكان) عشان نعرضهم بنفس الكرت
+class _FavItem {
+  final String nameAr;
+  final String nameEn;
+  final String? imagePath;
+  final IconData icon;
+  final String subtitle;
+  final VoidCallback onOpen;
+
+  const _FavItem({
+    required this.nameAr,
+    required this.nameEn,
+    required this.imagePath,
+    required this.icon,
+    required this.subtitle,
+    required this.onOpen,
+  });
 }
 
 // ====================== شاشة المفضلة ======================
@@ -64,8 +84,6 @@ class _FavoritesBodyState extends State<_FavoritesBody> {
   Color get _title => _isDark ? _aquaFoam : _cyberTeal;
   Color get _sub =>
       _isDark ? _aquaFoam.withAlpha(170) : const Color(0xFF2A7F85);
-  Color get _border =>
-      _isDark ? _aquaFoam.withAlpha(45) : _aquaFoam.withAlpha(150);
   Color get _tileBg =>
       _isDark ? _aquaFoam.withAlpha(28) : _aquaFoam.withAlpha(85);
   Color get _shadow => Colors.black.withAlpha(_isDark ? 80 : 22);
@@ -89,8 +107,8 @@ class _FavoritesBodyState extends State<_FavoritesBody> {
     }
   }
 
-  void _remove(College c) {
-    toggleFavorite(c.nameAr);
+  void _remove(_FavItem item) {
+    toggleFavorite(item.nameAr);
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -101,48 +119,73 @@ class _FavoritesBodyState extends State<_FavoritesBody> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           backgroundColor: _isDark ? _aquaFoam : _cyberTeal,
           content: Text(
-            'أُزيلت ${c.nameAr} من المفضلة',
+            'أُزيلت ${item.nameAr} من المفضلة',
             style: TextStyle(color: _isDark ? _cyberTeal : _aquaFoam),
           ),
           action: SnackBarAction(
             label: 'تراجع',
             textColor: _isDark ? _cyberTeal : _aquaFoam,
-            onPressed: () => toggleFavorite(c.nameAr),
+            onPressed: () => toggleFavorite(item.nameAr),
           ),
         ),
       );
   }
 
+  /// بنجمع الكليات المفضلة + الأماكن المفضلة (بنفس ترتيبها الأصلي)
+  List<_FavItem> _collect(Set<String> favs) {
+    return [
+      for (final c in colleges)
+        if (favs.contains(c.nameAr))
+          _FavItem(
+            nameAr: c.nameAr,
+            nameEn: c.nameEn,
+            imagePath: c.imagePath,
+            icon: c.icon,
+            subtitle: 'تصفح تفاصيل الكلية',
+            onOpen: () => _openCollege(c),
+          ),
+      for (final p in favoritablePlaces)
+        if (favs.contains(p.nameAr))
+          _FavItem(
+            nameAr: p.nameAr,
+            nameEn: p.nameEn,
+            imagePath: p.image,
+            icon: p.icon,
+            subtitle: 'تصفح تفاصيل المكان',
+            onOpen: () => openPlace(context, p.nameAr),
+          ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final content = SafeArea(
-        child: ValueListenableBuilder<Set<String>>(
-          valueListenable: favoritesNotifier,
-          builder: (context, favs, _) {
-            // بنحافظ على ترتيب الكليات الأصلي
-            final items = colleges.where((c) => favs.contains(c.nameAr)).toList();
+      child: ValueListenableBuilder<Set<String>>(
+        valueListenable: favoritesNotifier,
+        builder: (context, favs, _) {
+          final items = _collect(favs);
 
-            return ListView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
-              children: [
-                _buildTopBar(context),
-                const SizedBox(height: 18),
-                if (items.isEmpty)
-                  _buildEmpty(context)
-                else ...[
-                  _buildSummary(items.length),
-                  const SizedBox(height: 16),
-                  for (int i = 0; i < items.length; i++) ...[
-                    _card(items[i], i),
-                    const SizedBox(height: 12),
-                  ],
+          return ListView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
+            children: [
+              _buildTopBar(context),
+              const SizedBox(height: 18),
+              if (items.isEmpty)
+                _buildEmpty(context)
+              else ...[
+                _buildSummary(items.length),
+                const SizedBox(height: 16),
+                for (int i = 0; i < items.length; i++) ...[
+                  _card(items[i], i),
+                  const SizedBox(height: 12),
                 ],
               ],
-            );
-          },
-        ),
-      );
+            ],
+          );
+        },
+      ),
+    );
 
     // جوا التاب: بدون Scaffold عشان الـ nav bar بتاع الرئيسية يضل ظاهر
     return widget.embedded
@@ -207,6 +250,12 @@ class _FavoritesBodyState extends State<_FavoritesBody> {
         ? [const Color(0xFF021F26), const Color(0xFF05505F)]
         : [_cyberTeal, const Color(0xFF0A6475)];
 
+    final text = count == 1
+        ? 'عندك عنصر واحد بالمفضلة'
+        : count == 2
+            ? 'عندك عنصرين بالمفضلة'
+            : 'عندك $count عناصر بالمفضلة';
+
     return Container(
       padding: const EdgeInsets.all(16),
       clipBehavior: Clip.antiAlias,
@@ -227,12 +276,12 @@ class _FavoritesBodyState extends State<_FavoritesBody> {
               color: _aquaFoam.withAlpha(35),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.star_rounded, color: _gold, size: 26),
+            child: const Icon(Icons.favorite_rounded, color: _heart, size: 26),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              count == 1 ? 'عندك كلية وحدة بالمفضلة' : 'عندك $count كليات بالمفضلة',
+              text,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,
@@ -245,22 +294,24 @@ class _FavoritesBodyState extends State<_FavoritesBody> {
     );
   }
 
-  // ====================== كرت الكلية ======================
-  Widget _card(College c, int i) {
+  // ====================== الكرت (كلية أو مكان) ======================
+  Widget _card(_FavItem item, int i) {
     return TweenAnimationBuilder<double>(
-      key: ValueKey(c.nameAr),
+      key: ValueKey(item.nameAr),
       tween: Tween(begin: 0, end: 1),
       duration: Duration(milliseconds: 380 + (i.clamp(0, 6)) * 70),
       curve: Curves.easeOutCubic,
       builder: (_, v, child) => Opacity(
         opacity: v,
-        child: Transform.translate(offset: Offset(0, 22 * (1 - v)), child: child),
+        child:
+            Transform.translate(offset: Offset(0, 22 * (1 - v)), child: child),
       ),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
-            BoxShadow(color: _shadow, blurRadius: 14, offset: const Offset(0, 5)),
+            BoxShadow(
+                color: _shadow, blurRadius: 14, offset: const Offset(0, 5)),
           ],
         ),
         child: Material(
@@ -268,7 +319,7 @@ class _FavoritesBodyState extends State<_FavoritesBody> {
           borderRadius: BorderRadius.circular(24),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: () => _openCollege(c),
+            onTap: item.onOpen,
             child: Padding(
               padding: const EdgeInsets.all(10),
               child: Row(
@@ -278,7 +329,7 @@ class _FavoritesBodyState extends State<_FavoritesBody> {
                     child: SizedBox(
                       width: 92,
                       height: 92,
-                      child: _visual(c, i),
+                      child: _visual(item, i),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -287,7 +338,7 @@ class _FavoritesBodyState extends State<_FavoritesBody> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          c.nameAr,
+                          item.nameAr,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -301,7 +352,7 @@ class _FavoritesBodyState extends State<_FavoritesBody> {
                         Directionality(
                           textDirection: TextDirection.ltr,
                           child: Text(
-                            c.nameEn,
+                            item.nameEn,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(color: _sub, fontSize: 12),
@@ -309,7 +360,7 @@ class _FavoritesBodyState extends State<_FavoritesBody> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'تصفح تفاصيل الكلية',
+                          item.subtitle,
                           style: TextStyle(
                             color: _title,
                             fontSize: 12.5,
@@ -330,11 +381,11 @@ class _FavoritesBodyState extends State<_FavoritesBody> {
                           shape: const CircleBorder(),
                           child: InkWell(
                             customBorder: const CircleBorder(),
-                            onTap: () => _remove(c),
+                            onTap: () => _remove(item),
                             child: const Padding(
                               padding: EdgeInsets.all(7),
-                              child: Icon(Icons.star_rounded,
-                                  size: 22, color: _gold),
+                              child: Icon(Icons.favorite_rounded,
+                                  size: 22, color: _heart),
                             ),
                           ),
                         ),
@@ -351,7 +402,7 @@ class _FavoritesBodyState extends State<_FavoritesBody> {
     );
   }
 
-  Widget _visual(College c, int i) {
+  Widget _visual(_FavItem item, int i) {
     final g = _grads[i % _grads.length];
     final grad = DecoratedBox(
       decoration: BoxDecoration(
@@ -362,13 +413,14 @@ class _FavoritesBodyState extends State<_FavoritesBody> {
         ),
       ),
     );
-    final photo = c.imagePath;
+    final photo = item.imagePath;
 
     return Stack(
       fit: StackFit.expand,
       children: [
         if (photo != null)
-          Image.asset(photo, fit: BoxFit.cover, errorBuilder: (_, __, ___) => grad)
+          Image.asset(photo,
+              fit: BoxFit.cover, errorBuilder: (_, __, ___) => grad)
         else
           grad,
         Center(
@@ -378,9 +430,10 @@ class _FavoritesBodyState extends State<_FavoritesBody> {
             decoration: BoxDecoration(
               color: Colors.white.withAlpha(photo == null ? 28 : 60),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withAlpha(90), width: 1.2),
+              border:
+                  Border.all(color: Colors.white.withAlpha(90), width: 1.2),
             ),
-            child: Icon(c.icon, size: 26, color: Colors.white),
+            child: Icon(item.icon, size: 26, color: Colors.white),
           ),
         ),
       ],
@@ -397,11 +450,12 @@ class _FavoritesBodyState extends State<_FavoritesBody> {
             width: 96,
             height: 96,
             decoration: BoxDecoration(color: _tileBg, shape: BoxShape.circle),
-            child: Icon(Icons.star_border_rounded, size: 52, color: _title),
+            child:
+                Icon(Icons.favorite_border_rounded, size: 52, color: _title),
           ),
           const SizedBox(height: 18),
           Text(
-            'لسا ما ضفت أي كلية للمفضلة',
+            'لسا ما ضفت أي شي للمفضلة',
             style: TextStyle(
               color: _title,
               fontSize: 18,
@@ -410,7 +464,7 @@ class _FavoritesBodyState extends State<_FavoritesBody> {
           ),
           const SizedBox(height: 6),
           Text(
-            'اضغط على النجمة ⭐ فوق أي كلية عشان تظهر هون',
+            'اضغط على القلب ❤️ فوق أي كلية أو مكان عشان تظهر هون',
             textAlign: TextAlign.center,
             style: TextStyle(color: _sub, fontSize: 13.5, height: 1.6),
           ),

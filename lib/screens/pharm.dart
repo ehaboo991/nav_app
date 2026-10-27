@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'image_viewer.dart';
+
 const Color _cyberTeal = Color(0xFF03303B);
 const Color _aquaFoam = Color(0xFF96FCDF);
 
@@ -85,6 +85,35 @@ const List<_Floor> _floors = [
   ]),
 ];
 
+/// يعرض الصورة كاملة على الشاشة، وبالضغط على أي مكان بترجع للصفحة.
+void _showFullImage(BuildContext context, String assetPath) {
+  showDialog(
+    context: context,
+    useRootNavigator: true, // يفتحها فوق كل الشاشة
+    useSafeArea: false,
+    barrierColor: Colors.black,
+    builder: (ctx) => GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => Navigator.of(ctx).pop(), // أي ضغطة ترجّعك
+      child: SizedBox.expand(
+        child: InteractiveViewer(
+          minScale: 1,
+          maxScale: 4,
+          child: Image.asset(
+            assetPath,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const Icon(
+              Icons.broken_image_rounded,
+              color: Colors.white54,
+              size: 64,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 // ====================== الصفحة ======================
 class PharmacyCollegeDetailsPage extends StatefulWidget {
   const PharmacyCollegeDetailsPage({super.key});
@@ -152,85 +181,104 @@ class _PharmacyCollegeDetailsPageState
       decoration: const BoxDecoration(
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
       ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            _collegeImage,
-            fit: BoxFit.cover,
-            errorBuilder: (_, error, __) {
-              debugPrint('Pharmacy college image error: $error');
-              return const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
-                    colors: [Color(0xFF03303B), Color(0xFF0A6475)],
+      child: GestureDetector(
+        onTap: () => _showFullImage(context, _collegeImage),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              _collegeImage,
+              fit: BoxFit.cover,
+              errorBuilder: (_, error, __) {
+                debugPrint('Pharmacy college image error: $error');
+                return const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [Color(0xFF03303B), Color(0xFF0A6475)],
+                    ),
+                  ),
+                );
+              },
+            ),
+            // تعتيم لتوضيح النص
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withAlpha(60),
+                    _cyberTeal.withAlpha(215),
+                  ],
+                ),
+              ),
+            ),
+            // أيقونة تلمّح إن الصورة بتنفتح
+            Positioned(
+              top: top + 8,
+              left: 12,
+              child: IgnorePointer(
+                child: Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withAlpha(70),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.fullscreen_rounded,
+                      color: Colors.white, size: 20),
+                ),
+              ),
+            ),
+            Positioned(
+              top: top + 8,
+              right: 12,
+              child: Material(
+                color: _aquaFoam.withAlpha(40),
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => Navigator.of(context).maybePop(),
+                  child: const Padding(
+                    padding: EdgeInsets.all(11),
+                    child: Icon(Icons.arrow_back_ios_new,
+                        color: _aquaFoam, size: 20),
                   ),
                 ),
-              );
-            },
-          ),
-          // تعتيم لتوضيح النص
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withAlpha(60),
-                  _cyberTeal.withAlpha(215),
+              ),
+            ),
+            Positioned(
+              right: 20,
+              left: 20,
+              bottom: 22,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'كلية الصيدلة',
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                      'Faculty of Pharmacy',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: _aquaFoam.withAlpha(220),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
-          Positioned(
-            top: top + 8,
-            right: 12,
-            child: Material(
-              color: _aquaFoam.withAlpha(40),
-              shape: const CircleBorder(),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: () => Navigator.of(context).maybePop(),
-                child: const Padding(
-                  padding: EdgeInsets.all(11),
-                  child: Icon(Icons.arrow_back_ios_new,
-                      color: _aquaFoam, size: 20),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 20,
-            left: 20,
-            bottom: 22,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'كلية الصيدلة',
-                  style: TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Text(
-                    'Faculty of Pharmacy',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: _aquaFoam.withAlpha(220),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

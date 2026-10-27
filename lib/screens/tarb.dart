@@ -105,7 +105,7 @@ class _EducationCollegeDetailsPageState
               padding: const EdgeInsets.fromLTRB(20, 6, 20, 28),
               sliver: SliverList.separated(
                 itemCount: floor.places.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (_, i) => _appear(
                   '${_selected}_$i',
                   i,
@@ -138,7 +138,7 @@ class _EducationCollegeDetailsPageState
             Image.asset(
               _collegeImage,
               fit: BoxFit.cover,
-              errorBuilder: (_, error, __) {
+              errorBuilder: (_, error, _) {
                 debugPrint('Education college image error: $error');
                 return const DecoratedBox(
                   decoration: BoxDecoration(
