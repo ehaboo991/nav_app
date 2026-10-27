@@ -3,7 +3,15 @@ import 'college_data.dart';
 import 'favourite_screen.dart';
 import 'it_college_screen.dart';
 import 'engineering_screen.dart';
+import 'buisness.dart'; // صفحة كلية الأعمال
 import 'science2 .dart'; // صفحة كلية العلوم 2
+import 'science1.dart'; // صفحة كلية العلوم 1
+import 'medicine.dart'; // صفحة كلية الطب
+import 'lit.dart'; // صفحة كلية الآداب
+import 'dent.dart'; // صفحة كلية طب الأسنان
+import 'pharm.dart'; // صفحة كلية الصيدلة
+import 'sh_hq.dart'; // صفحة كلية الشريعة والحقوق
+import 'tarb.dart'; // صفحة كلية العلوم التربوية
 
 const Color _cyberTeal = Color(0xFF03303B);
 const Color _aquaFoam = Color(0xFF96FCDF);
@@ -12,6 +20,7 @@ const Color _aquaFoam = Color(0xFF96FCDF);
 /// إذا الكلية مش موجودة هون بتظهر خلفية متدرجة مع أيقونتها.
 /// لا تنسى تضيف الصور في pubspec.yaml تحت assets.
 const Map<String, String> _photos = {
+  // 'كلية الأعمال': 'image/buisness.jpeg', // تم إلغاء الصورة
   // 'كلية الهندسة': 'assets/colleges/engineering.jpg',
   // 'كلية الطب البشري': 'assets/colleges/medicine.jpg',
 };
@@ -28,6 +37,7 @@ const List<String> _hiddenKeywords = [
   'الزراعة',
   'التمريض',
   'الاجتماعية',
+  'العلوم الطبية المساندة',
 ];
 
 enum _Sort { normal, name }
@@ -64,24 +74,65 @@ class _CollegesScreenState extends State<CollegesScreen> {
       _isDark ? _aquaFoam.withAlpha(28) : _aquaFoam.withAlpha(85);
   Color get _shadow => Colors.black.withAlpha(_isDark ? 80 : 22);
 
-  /// الكليات بعد استبعاد المخفية.
+  // ---------- دمج الشريعة والحقوق بكرت واحد (نفس المبنى) ----------
+
+  /// توحيد الحروف العربية (همزات، ة/ه، ى/ي، تشكيل، تطويل، مسافات).
+  String _norm(String s) => s
+      .replaceAll(RegExp(r'[\u064B-\u0652\u0640]'), '')
+      .replaceAll(RegExp(r'[أإآ]'), 'ا')
+      .replaceAll('ة', 'ه')
+      .replaceAll('ى', 'ي')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+
+  bool _isSharia(College c) => _norm(c.nameAr).contains('الشريعه');
+
+  bool _isLaw(College c) {
+    final n = _norm(c.nameAr);
+    return n.contains('الحقوق') && !n.contains('الشريعه');
+  }
+
+  /// الحقوق بتنخفي فقط إذا كلية الشريعة موجودة (عشان تندمج معها).
+  bool get _hasSharia => colleges.any(_isSharia);
+
+  bool get _merged => _hasSharia && colleges.any(_isLaw);
+
+  String _nameAr(College c) =>
+      (_isSharia(c) && _merged) ? 'كلية الشريعة والحقوق' : c.nameAr;
+
+  String _nameEn(College c) =>
+      (_isSharia(c) && _merged) ? 'Faculty of Sharia & Law' : c.nameEn;
+
+  /// نص البحث: كرت الشريعة والحقوق بيطابق اسم الكليتين.
+  String _searchText(College c) {
+    final b =
+        StringBuffer('${c.nameAr} ${c.nameEn} ${_nameAr(c)} ${_nameEn(c)}');
+    if (_isSharia(c)) {
+      for (final l in colleges.where(_isLaw)) {
+        b.write(' ${l.nameAr} ${l.nameEn}');
+      }
+    }
+    return _norm(b.toString()).toLowerCase();
+  }
+
+  /// الكليات بعد استبعاد المخفية ودمج الحقوق مع الشريعة.
   List<College> get _visible => colleges
-      .where((c) => !_hiddenKeywords.any((k) => c.nameAr.contains(k)))
+      .where((c) =>
+          !_hiddenKeywords.any((k) => _norm(c.nameAr).contains(_norm(k))))
+      .where((c) => !(_hasSharia && _isLaw(c)))
       .toList();
 
   List<College> get _filtered {
-    final q = _query.trim().toLowerCase();
+    final q = _norm(_query).toLowerCase();
     var list = q.isEmpty
         ? List<College>.of(_visible)
         : _visible.where((c) {
-            return c.nameAr.contains(q) ||
-                c.nameEn.toLowerCase().contains(q) ||
-                c.building.toString() == q;
+            return _searchText(c).contains(q) || c.building.toString() == q;
           }).toList();
 
     switch (_sort) {
       case _Sort.name:
-        list.sort((a, b) => a.nameAr.compareTo(b.nameAr));
+        list.sort((a, b) => _nameAr(a).compareTo(_nameAr(b)));
         break;
       case _Sort.normal:
         break;
@@ -104,15 +155,44 @@ class _CollegesScreenState extends State<CollegesScreen> {
       page = const ItCollegeDetailsPage();
     } else if (name == 'كلية الهندسة') {
       page = const EngineeringCollegeDetailsPage();
+    } else if (name.contains('الأعمال') || name.contains('الاعمال')) {
+      page = const BusinessCollegeDetailsPage();
     } else if (name.contains('العلوم') && name.contains('2')) {
       page = const ScienceCollege2DetailsPage();
+    } else if (name.contains('العلوم') && name.contains('1')) {
+      page = const ScienceCollege1DetailsPage();
+    } else if (name.contains('الصيدلة') || name.contains('الصيدله')) {
+      page = const PharmacyCollegeDetailsPage();
+    } else if (name
+        .replaceAll('أ', 'ا')
+        .replaceAll('إ', 'ا')
+        .replaceAll('آ', 'ا')
+        .contains('الاسنان')) {
+      // لازم يكون قبل شرط الطب
+      page = const DentistryCollegeDetailsPage();
+    } else if (name.contains('الطب')) {
+      page = const MedicineCollegeDetailsPage();
+    } else if (name
+        .replaceAll('آ', 'ا')
+        .replaceAll('أ', 'ا')
+        .contains('الاداب')) {
+      page = const ArtsCollegeDetailsPage();
+    } else if (name.contains('التربية') ||
+        name.contains('التربيه') ||
+        name.contains('العلوم التربوية') ||
+        name.contains('العلوم التربويه')) {
+      // كلية العلوم التربوية
+      page = const EducationCollegeDetailsPage();
+    } else if (_isSharia(c)) {
+      // كلية الشريعة والحقوق (كرت واحد)
+      page = const ShariaLawCollegeDetailsPage();
     }
 
     if (page != null) {
       Navigator.push(context, MaterialPageRoute(builder: (_) => page!));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${c.nameAr} • مبنى ${c.building}')),
+        SnackBar(content: Text('${_nameAr(c)} • مبنى ${c.building}')),
       );
     }
   }
@@ -130,8 +210,8 @@ class _CollegesScreenState extends State<CollegesScreen> {
           backgroundColor: _isDark ? _aquaFoam : _cyberTeal,
           content: Text(
             added
-                ? 'أُضيفت ${c.nameAr} للمفضلة'
-                : 'أُزيلت ${c.nameAr} من المفضلة',
+                ? 'أُضيفت ${_nameAr(c)} للمفضلة'
+                : 'أُزيلت ${_nameAr(c)} من المفضلة',
             style: TextStyle(color: _isDark ? _cyberTeal : _aquaFoam),
           ),
         ),
@@ -682,7 +762,7 @@ class _CollegesScreenState extends State<CollegesScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        c.nameAr,
+                        _nameAr(c),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -698,7 +778,7 @@ class _CollegesScreenState extends State<CollegesScreen> {
                         child: Align(
                           alignment: AlignmentDirectional.centerStart,
                           child: Text(
-                            c.nameEn,
+                            _nameEn(c),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(color: _sub, fontSize: 11),
@@ -773,7 +853,7 @@ class _CollegesScreenState extends State<CollegesScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        c.nameAr,
+                        _nameAr(c),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -787,7 +867,7 @@ class _CollegesScreenState extends State<CollegesScreen> {
                       Directionality(
                         textDirection: TextDirection.ltr,
                         child: Text(
-                          c.nameEn,
+                          _nameEn(c),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(color: _sub, fontSize: 12),

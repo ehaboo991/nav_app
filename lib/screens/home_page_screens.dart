@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'map_viewer_screen.dart';
-import 'campus_map_screen.dart';
 import 'colleges_screen.dart';
 import 'favourite_screen.dart';
 import 'account_screen.dart';
 import 'start_navigation_screen.dart';
-import 'nav_ai_screen.dart';
+import 'nav_ai_screen.dart'; // شاشة NAV AI (غيّر الاسم إذا ملفك اسمه مختلف)
 
 const Color cyberTeal = Color(0xFF03303B);
 const Color aquaFoam = Color(0xFF96FCDF);
@@ -50,10 +49,17 @@ class HomePageScreen extends StatefulWidget {
 class _HomePageScreenState extends State<HomePageScreen> {
   int selectedIndex = 0;
 
+  /// بعد أول فتح لـ NAV AI بنخلي الشاشة محفوظة عشان ما تضيع المحادثة
+  /// لما تنتقل لتاب ثاني.
+  bool _aiOpened = false;
+
+  /// نفس الفكرة للخريطة: بعد أول فتح بتضل محفوظة (موقعك وزوم الخريطة ما بضيعوا).
+  bool _mapOpened = false;
+
   final GlobalKey<CurvedNavigationBarState> _navKey = GlobalKey();
   final TextEditingController searchController = TextEditingController();
 
-  // 0 الرئيسية | 1 الخريطة | 2 NAV AI (بالنص) | 3 المفضلة | 4 حسابي
+  // 0 الرئيسية | 1 الخريطة | 2 NAV AI (بالمنتصف) | 3 المفضلة | 4 حسابي
   static const List<_NavItem> _navItems = [
     _NavItem(Icons.home_rounded, 'الرئيسية'),
     _NavItem(Icons.map_rounded, 'الخريطة'),
@@ -86,15 +92,8 @@ class _HomePageScreenState extends State<HomePageScreen> {
     );
   }
 
-  // فتح شاشة الخريطة القديمة من بطاقة الخريطة في الصفحة الرئيسية
-  void openMap() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const MapViewerScreen(),
-      ),
-    );
-  }
+  // فتح الخريطة كتاب داخل الصفحة الرئيسية (الشريط السفلي يضل ظاهر)
+  void openMap() => _goToTab(1);
 
   void openNavigation() {
     Navigator.push(
@@ -135,8 +134,8 @@ class _HomePageScreenState extends State<HomePageScreen> {
         child: Scaffold(
           backgroundColor: bg,
           body: IndexedStack(
-            // 0 رئيسية | 1 NAV AI | 2 مفضلة | 3 حسابي
-            index: const {0: 0, 2: 1, 3: 2, 4: 3}[selectedIndex] ?? 0,
+            // children: 0 رئيسية | 1 مفضلة | 2 حسابي | 3 NAV AI | 4 الخريطة
+            index: const {0: 0, 3: 1, 4: 2, 2: 3, 1: 4}[selectedIndex] ?? 0,
             sizing: StackFit.expand,
             children: [
               SafeArea(
@@ -303,24 +302,21 @@ class _HomePageScreenState extends State<HomePageScreen> {
                           const SizedBox(height: 14),
                           GestureDetector(
                             onTap: openMap,
-                            child: Hero(
-                              tag: 'Mutah_Map',
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(18),
-                                child: SizedBox(
-                                  height: 190,
-                                  width: double.infinity,
-                                  child: Image.asset(
-                                    'image/Mutah_Map.png',
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, _, _) => Container(
-                                      color: mapBox,
-                                      alignment: Alignment.center,
-                                      child: Icon(
-                                        Icons.map_outlined,
-                                        size: 65,
-                                        color: title,
-                                      ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(18),
+                              child: SizedBox(
+                                height: 190,
+                                width: double.infinity,
+                                child: Image.asset(
+                                  'image/Mutah_Map.png',
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) => Container(
+                                    color: mapBox,
+                                    alignment: Alignment.center,
+                                    child: Icon(
+                                      Icons.map_outlined,
+                                      size: 65,
+                                      color: title,
                                     ),
                                   ),
                                 ),
@@ -428,8 +424,6 @@ class _HomePageScreenState extends State<HomePageScreen> {
                   ],
                 ),
               ),
-              // NAV AI: دايماً موجود بالـ IndexedStack عشان المحادثة ما تنمسح
-              const NavAiScreen(embedded: true),
               selectedIndex == 3
                   ? const FavoritesScreen(embedded: true)
                   : const SizedBox.shrink(),
@@ -438,6 +432,14 @@ class _HomePageScreenState extends State<HomePageScreen> {
                       embedded: true,
                       onOpenFavorites: () => _goToTab(3),
                     )
+                  : const SizedBox.shrink(),
+              // NAV AI: بعد أول فتح بتضل محفوظة عشان ما تضيع المحادثة
+              _aiOpened
+                  ? const NavAiScreen(embedded: true)
+                  : const SizedBox.shrink(),
+              // الخريطة: بعد أول فتح بتضل محفوظة، والشريط السفلي يضل ظاهر
+              _mapOpened
+                  ? const MapViewerScreen()
                   : const SizedBox.shrink(),
             ],
           ),
@@ -498,23 +500,15 @@ class _HomePageScreenState extends State<HomePageScreen> {
 
   bool _letIndexChange(int index) => true;
 
-  // الخريطة (1) بس بتفتح كصفحة مستقلة، وNAV AI (2) تاب عادي
+  // كل التابات (بما فيها الخريطة وNAV AI) صارت تابات عادية والشريط يضل ظاهر
   void _onNavTap(int visualIndex) {
     final int logical = (_navItems.length - 1) - visualIndex;
 
-    if (logical == 1) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const CampusMapScreen()),
-      );
-
-      // نرجع الشريط للتاب اللي كان مفتوح قبل الخريطة
-      _navKey.currentState
-          ?.setPage((_navItems.length - 1) - selectedIndex);
-      return;
-    }
-
-    setState(() => selectedIndex = logical);
+    setState(() {
+      selectedIndex = logical;
+      if (logical == 2) _aiOpened = true;
+      if (logical == 1) _mapOpened = true;
+    });
   }
 
   void _goToTab(int logical) {

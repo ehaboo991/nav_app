@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'image_viewer.dart';
 
 const Color _cyberTeal = Color(0xFF03303B);
 const Color _aquaFoam = Color(0xFF96FCDF);
 
 /// صورة الكلية (ضيفها في pubspec.yaml تحت assets).
-/// إذا الصورة مش موجودة بتظهر خلفية متدرجة مع أيقونة.
+/// إذا الصورة مش موجودة بتظهر خلفية متدرجة.
 const String _collegeImage = 'image/science21.jpeg';
 
 // ====================== نموذج البيانات ======================
@@ -117,8 +118,6 @@ class _ScienceCollege2DetailsPageState
   Color get _tileBg =>
       _isDark ? _aquaFoam.withAlpha(28) : _aquaFoam.withAlpha(85);
   Color get _shadow => Colors.black.withAlpha(_isDark ? 80 : 22);
-  Color get _bannerBg =>
-      _isDark ? const Color(0xFF021F26) : const Color(0xFFC9FFF0);
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +131,6 @@ class _ScienceCollege2DetailsPageState
           physics: const BouncingScrollPhysics(),
           slivers: [
             SliverToBoxAdapter(child: _header(context)),
-            SliverToBoxAdapter(child: _buildBanner()),
             SliverToBoxAdapter(child: _floorSelector()),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 6, 20, 28),
@@ -152,123 +150,114 @@ class _ScienceCollege2DetailsPageState
     );
   }
 
-  // ---------- الهيدر ----------
+  // ====================== الهيدر (صورة الكلية) ======================
   Widget _header(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
-    final colors = _isDark
-        ? [const Color(0xFF021F26), const Color(0xFF05505F)]
-        : [_cyberTeal, const Color(0xFF0A6475)];
 
     return Container(
+      height: 250,
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: colors,
-        ),
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(36)),
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
       ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: -30,
-            bottom: -26,
-            child: Icon(Icons.science_rounded,
-                size: 190, color: _aquaFoam.withAlpha(20)),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(12, top + 8, 16, 28),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Material(
-                  color: _aquaFoam.withAlpha(30),
-                  shape: const CircleBorder(),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: () => Navigator.of(context).maybePop(),
-                    child: const Padding(
-                      padding: EdgeInsets.all(11),
-                      child: Icon(Icons.arrow_back_ios_new,
-                          color: _aquaFoam, size: 20),
+      child: GestureDetector(
+        onTap: () => showFullImage(context, _collegeImage),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              _collegeImage,
+              fit: BoxFit.cover,
+              errorBuilder: (_, error, __) {
+                debugPrint('Science 2 college image error: $error');
+                return const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [Color(0xFF03303B), Color(0xFF0A6475)],
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'كلية العلوم 2',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'دليل الطوابق والمختبرات والخدمات',
-                          style: TextStyle(
-                              fontSize: 13, color: _aquaFoam.withAlpha(215)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+                );
+              },
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ---------- البانر (صورة الكلية) ----------
-  Widget _buildBanner() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Container(
-        height: 230,
-        width: double.infinity,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: _bannerBg,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: _border, width: 1.2),
-          boxShadow: [
-            BoxShadow(
-                color: _shadow, blurRadius: 20, offset: const Offset(0, 8)),
-          ],
-        ),
-        child: Image.asset(
-          _collegeImage,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: double.infinity,
-          errorBuilder: (_, error, __) {
-            debugPrint('Science college image error: $error');
-            return Container(
-              decoration: const BoxDecoration(
+            // تعتيم لتوضيح النص
+            DecoratedBox(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [Color(0xFF03303B), Color(0xFF1FA39A)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withAlpha(60),
+                    _cyberTeal.withAlpha(215),
+                  ],
                 ),
               ),
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.science_rounded,
-                color: Colors.white70,
-                size: 70,
+            ),
+            // أيقونة تلمّح إن الصورة بتنفتح
+            Positioned(
+              top: top + 8,
+              left: 12,
+              child: IgnorePointer(
+                child: Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withAlpha(70),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.fullscreen_rounded,
+                      color: Colors.white, size: 20),
+                ),
               ),
-            );
-          },
+            ),
+            Positioned(
+              top: top + 8,
+              right: 12,
+              child: Material(
+                color: _aquaFoam.withAlpha(40),
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => Navigator.of(context).maybePop(),
+                  child: const Padding(
+                    padding: EdgeInsets.all(11),
+                    child: Icon(Icons.arrow_back_ios_new,
+                        color: _aquaFoam, size: 20),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 20,
+              left: 20,
+              bottom: 22,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'كلية العلوم 2',
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                      'Faculty of Science 2',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: _aquaFoam.withAlpha(220),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
