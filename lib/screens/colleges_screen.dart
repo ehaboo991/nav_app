@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart'; // حركة الظهور واحد ورا الثاني
 import 'college_data.dart';
 import 'favourite_screen.dart';
 import 'it_college_screen.dart';
@@ -12,9 +13,29 @@ import 'dent.dart'; // صفحة كلية طب الأسنان
 import 'pharm.dart'; // صفحة كلية الصيدلة
 import 'sh_hq.dart'; // صفحة كلية الشريعة والحقوق
 import 'tarb.dart'; // صفحة كلية العلوم التربوية
+import 'sport.dart'; // صفحة كلية علوم الرياضة
 
 const Color _cyberTeal = Color(0xFF03303B);
 const Color _aquaFoam = Color(0xFF96FCDF);
+
+/// انتقال بطيء عند فتح صفحة الكلية
+const Duration _slowDuration = Duration(milliseconds: 400); // غيّر الرقم حسب ذوقك
+
+/// ظهور الكروت واحد ورا الثاني (Staggered)
+const int _staggerMs = 250; // الفاصل بين كل كرت والتاني (زيدو لو بدك أبطأ)
+const int _staggerMaxItems = 10; // آخر كرت بياخد تأخير، الباقي بيظهر معه
+
+Route<T> _slowRoute<T>(Widget page) {
+  return PageRouteBuilder<T>(
+    transitionDuration: _slowDuration,
+    reverseTransitionDuration: _slowDuration,
+    pageBuilder: (_, _, _) => page,
+    transitionsBuilder: (_, animation, _, child) => FadeTransition(
+      opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+      child: child,
+    ),
+  );
+}
 
 /// صور الكليات (اختياري): اربط اسم الكلية بمسار الصورة.
 /// إذا الكلية مش موجودة هون بتظهر خلفية متدرجة مع أيقونتها.
@@ -155,6 +176,9 @@ class _CollegesScreenState extends State<CollegesScreen> {
       page = const ItCollegeDetailsPage();
     } else if (name == 'كلية الهندسة') {
       page = const EngineeringCollegeDetailsPage();
+    } else if (name.contains('الرياضة') || name.contains('الرياضه')) {
+      // كلية علوم الرياضة (لازم يكون قبل شرط التربية)
+      page = const SportCollegeDetailsPage();
     } else if (name.contains('الأعمال') || name.contains('الاعمال')) {
       page = const BusinessCollegeDetailsPage();
     } else if (name.contains('العلوم') && name.contains('2')) {
@@ -189,7 +213,7 @@ class _CollegesScreenState extends State<CollegesScreen> {
     }
 
     if (page != null) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => page!));
+      Navigator.push(context, _slowRoute(page));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${_nameAr(c)} • مبنى ${c.building}')),
@@ -254,18 +278,22 @@ class _CollegesScreenState extends State<CollegesScreen> {
     );
   }
 
+  /// ظهور الكرت واحد ورا الثاني: تلاشي + انزلاق من تحت (نفس حركة الفيديو)
+  /// الكرت رقم i بيتأخر i × 80ms. الـ key بيعيد تشغيل الحركة لما يتغير
+  /// البحث أو الترتيب أو نمط العرض.
   Widget _appear(int i, Widget child) {
-    return TweenAnimationBuilder<double>(
-      key: ValueKey('$i$_query${_sort.name}$_grid'),
-      tween: Tween(begin: 0, end: 1),
-      duration: Duration(milliseconds: 380 + (i.clamp(0, 8)) * 70),
-      curve: Curves.easeOutCubic,
-      builder: (_, v, c) => Opacity(
-        opacity: v,
-        child: Transform.translate(offset: Offset(0, 24 * (1 - v)), child: c),
-      ),
-      child: child,
-    );
+    return child
+        .animate(
+          key: ValueKey('$i$_query${_sort.name}$_grid'),
+          delay: (_staggerMs * i.clamp(0, _staggerMaxItems)).ms,
+        )
+        .fadeIn(duration: 400.ms, curve: Curves.easeOut)
+        .slideY(
+          begin: 0.2,
+          end: 0,
+          duration: 400.ms,
+          curve: Curves.easeOutCubic,
+        );
   }
 
   @override

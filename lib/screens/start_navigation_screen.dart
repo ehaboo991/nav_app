@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'college_data.dart';
 import 'map_viewer_screen.dart';
+import 'user_location.dart';
 
 const Color _cyberTeal = Color(0xFF03303B);
 const Color _aquaFoam = Color(0xFF96FCDF);
+
+/// لون نقطة "موقعك" (نفس لون النقطة على الخريطة)
+const Color _youBlue = Color(0xFF1A73E8);
 
 class StartNavigationScreen extends StatefulWidget {
   const StartNavigationScreen({super.key});
@@ -51,6 +55,93 @@ class _StartNavigationScreenState extends State<StartNavigationScreen> {
           buildingNumber: destination.building,
         ),
       ),
+    );
+  }
+
+  /// يفتح الخريطة بوضع "حدد موقعك" وبيرجع تلقائياً بعد أول ضغطة
+  void _pickLocation() {
+    pickLocationMode.value = true;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const MapViewerScreen(popOnPick: true),
+      ),
+    ).then((_) => pickLocationMode.value = false); // إذا رجع بدون ما يحدد
+  }
+
+  /// كرت "موقعك الحالي": بيسمع لـ userLocationNotifier وبيتحدث لحاله
+  Widget _buildLocationCard({
+    required Color surface,
+    required Color titleColor,
+    required Color secondaryColor,
+    required Color borderColor,
+  }) {
+    return ValueListenableBuilder<Offset?>(
+      valueListenable: userLocationNotifier,
+      builder: (context, loc, _) {
+        final has = loc != null;
+        return Container(
+          margin: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: has ? titleColor : borderColor,
+              width: has ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: has
+                      ? _youBlue.withAlpha(28)
+                      : titleColor.withAlpha(20),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  has ? Icons.my_location_rounded : Icons.location_searching,
+                  color: has ? _youBlue : secondaryColor,
+                ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'موقعك الحالي',
+                      style: TextStyle(
+                        color: titleColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      has ? 'تم تحديد موقعك على الخريطة' : 'لم تحدد موقعك بعد',
+                      style: TextStyle(color: secondaryColor, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: _pickLocation,
+                child: Text(has ? 'تغيير' : 'حدد موقعك'),
+              ),
+              if (has)
+                IconButton(
+                  tooltip: 'إزالة موقعي',
+                  icon: Icon(Icons.close_rounded, color: secondaryColor),
+                  onPressed: () => userLocationNotifier.value = null,
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -165,6 +256,15 @@ class _StartNavigationScreenState extends State<StartNavigationScreen> {
                   ],
                 ),
               ),
+
+              // كرت موقعك الحالي
+              _buildLocationCard(
+                surface: surface,
+                titleColor: titleColor,
+                secondaryColor: secondaryColor,
+                borderColor: borderColor,
+              ),
+
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 23, 20, 12),
                 child: Row(

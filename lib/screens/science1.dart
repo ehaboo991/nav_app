@@ -237,22 +237,6 @@ class _ScienceCollege1DetailsPageState
                 ),
               ),
             ),
-            // أيقونة تلمّح إن الصورة بتنفتح
-            Positioned(
-              top: top + 8,
-              left: 12,
-              child: IgnorePointer(
-                child: Container(
-                  padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withAlpha(70),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.fullscreen_rounded,
-                      color: Colors.white, size: 20),
-                ),
-              ),
-            ),
             Positioned(
               top: top + 8,
               right: 12,

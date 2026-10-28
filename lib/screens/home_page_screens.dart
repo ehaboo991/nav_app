@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'package:animated_theme_switcher/animated_theme_switcher.dart';
 import 'map_viewer_screen.dart';
 import 'colleges_screen.dart';
 import 'favourite_screen.dart';
@@ -8,6 +11,7 @@ import 'account_screen.dart';
 import 'start_navigation_screen.dart';
 import 'nav_ai_screen.dart';
 import 'other_places_screen.dart';
+import 'user_location.dart';
 
 // ╔═══════════════════════════════════════════════╗
 // ║  اختار الباليت من هون:                        ║
@@ -52,6 +56,24 @@ const Color _accent2 = kPalette == 3
             ? Color(0xFFFF9C86)
             : Color(0xFF5FD9BC);
 
+/// الثيمات اللي بنبدّل بينها بتأثير الدائرة (استخدمهم بـ main.dart كمان)
+final ThemeData appLightTheme = ThemeData(
+  useMaterial3: true,
+  colorScheme: ColorScheme.fromSeed(
+    seedColor: cyberTeal,
+    brightness: Brightness.light,
+  ),
+);
+
+final ThemeData appDarkTheme = ThemeData(
+  useMaterial3: true,
+  colorScheme: ColorScheme.fromSeed(
+    seedColor: cyberTeal,
+    brightness: Brightness.dark,
+  ),
+);
+
+/// بنخليه محدّث عشان أي شاشة ثانية بتسمع له تضل متزامنة
 final ValueNotifier<ThemeMode> themeNotifier =
     ValueNotifier(ThemeMode.light);
 
@@ -146,8 +168,17 @@ class _HomePageScreenState extends State<HomePageScreen> {
 
   bool get isDark => Theme.of(context).brightness == Brightness.dark;
 
-  void toggleTheme() {
-    themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
+  /// تبديل الثيم بتأثير الدائرة (زي Telegram) — الدائرة بتبدأ من مكان الزر
+  /// [switcherContext] لازم يكون من builder تاع ThemeSwitcher
+  void toggleTheme(BuildContext switcherContext) {
+    final goingDark = !isDark;
+
+    ThemeSwitcher.of(switcherContext).changeTheme(
+      theme: goingDark ? appDarkTheme : appLightTheme,
+      isReversed: !goingDark, // الدائرة بتنكمش عند الرجوع للفاتح
+    );
+
+    themeNotifier.value = goingDark ? ThemeMode.dark : ThemeMode.light;
   }
 
   void showMessage(String message) {
@@ -227,7 +258,8 @@ class _HomePageScreenState extends State<HomePageScreen> {
       value: overlay,
       child: Directionality(
         textDirection: TextDirection.rtl,
-        child: scaffold,
+        // المنطقة اللي بتنعمل عليها لقطة شاشة وبتظهر فيها دائرة التبديل
+        child: ThemeSwitchingArea(child: scaffold),
       ),
     );
   }
@@ -360,19 +392,22 @@ class _HomePageScreenState extends State<HomePageScreen> {
             ),
           ),
         ),
-        _roundIconButton(
-          p,
-          tooltip: isDark ? 'الوضع الفاتح' : 'الوضع الداكن',
-          onPressed: toggleTheme,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            transitionBuilder: (child, anim) =>
-                RotationTransition(turns: anim, child: child),
-            child: Icon(
-              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-              key: ValueKey(isDark),
-              color: p.title,
-              size: 22,
+        // زر الثيم: ThemeSwitcher بيحدد نقطة بداية الدائرة من مكان الزر
+        ThemeSwitcher(
+          builder: (switcherContext) => _roundIconButton(
+            p, 
+            tooltip: isDark ? 'الوضع الفاتح' : 'الوضع الداكن',
+            onPressed: () => toggleTheme(switcherContext),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 600),
+              transitionBuilder: (child, anim) =>
+                  RotationTransition(turns: anim, child: child),
+              child: Icon(
+                isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                key: ValueKey(isDark),
+                color: p.title,
+                size: 22,
+              ),
             ),
           ),
         ),
@@ -442,7 +477,7 @@ class _HomePageScreenState extends State<HomePageScreen> {
                   fit: StackFit.expand,
                   children: [
                     Image.asset(
-                      'image/Mutah_Map.png',
+                      'image/MUU.jpeg',
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => Container(
                         decoration: const BoxDecoration(
@@ -509,31 +544,43 @@ class _HomePageScreenState extends State<HomePageScreen> {
                         ],
                       ),
                     ),
-                    GestureDetector(
-                      onTap: openMap,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(30),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: aquaFoam.withAlpha(110)),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.map_rounded,
-                                size: 16, color: aquaFoam),
-                            SizedBox(width: 6),
-                            Text(
-                              'الخريطة',
-                              style: TextStyle(
+                    // زر "حدد موقعك": بيفتح الخريطة بوضع تحديد المكان
+                    ValueListenableBuilder<Offset?>(
+                      valueListenable: userLocationNotifier,
+                      builder: (_, loc, _) => GestureDetector(
+                        onTap: () {
+                          pickLocationMode.value = true;
+                          openMap();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(30),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: aquaFoam.withAlpha(110)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                loc == null
+                                    ? Icons.my_location_rounded
+                                    : Icons.edit_location_alt_rounded,
+                                size: 16,
                                 color: aquaFoam,
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 6),
+                              Text(
+                                loc == null ? 'حدد موقعك' : 'غيّر موقعك',
+                                style: const TextStyle(
+                                  color: aquaFoam,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -606,18 +653,18 @@ class _HomePageScreenState extends State<HomePageScreen> {
     );
   }
 
-  /// "ابدأ الملاحة": أهم إجراء بالتطبيق، لذلك بحجم أكبر ولون مختلف
+  /// "ابدأ الملاحة": أهم إجراء بالتطبيق — كرت غامق فيه بوصلة + سهم منحني
+  /// + دائرة سهم (مثل التصميم المطلوب)
   Widget _buildPrimaryAction(_Pal p) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(26),
-        gradient: LinearGradient(
+        borderRadius: BorderRadius.circular(28),
+        gradient: const LinearGradient(
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
-          colors: p.dark
-              ? [aquaFoam, _accent2]
-              : [cyberTeal, _deep2],
+          colors: [cyberTeal, _deep2],
         ),
+        border: Border.all(color: aquaFoam.withAlpha(p.dark ? 55 : 28)),
         boxShadow: [
           BoxShadow(
             color: p.shadow,
@@ -626,63 +673,88 @@ class _HomePageScreenState extends State<HomePageScreen> {
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(26),
-          onTap: openNavigation,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-            child: Row(
-              children: [
-                Container(
-                  width: 54,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    color: p.primaryFg.withAlpha(p.dark ? 30 : 38),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.navigation_rounded,
-                      color: p.primaryFg, size: 28),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(27),
+        child: Stack(
+          children: [
+            // السهم المنحني (علامة مائية بالوسط/اليسار)
+            Positioned(
+              left: 66,
+              top: 8,
+              bottom: 8,
+              width: 125,
+              child: IgnorePointer(
+                child: CustomPaint(painter: _CurvedArrowPainter()),
+              ),
+            ),
+
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: openNavigation,
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+                  child: Row(
                     children: [
-                      Text(
-                        'ابدأ الملاحة',
-                        style: TextStyle(
-                          color: p.primaryFg,
-                          fontSize: 19,
-                          fontWeight: FontWeight.w800,
+                      // البوصلة (أقصى اليمين)
+                      const SizedBox(
+                        width: 66,
+                        height: 66,
+                        child: CustomPaint(painter: _CompassIconPainter()),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'ابدأ الملاحة',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 21,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'الوصول إلى وجهتك',
+                              style: TextStyle(
+                                color: aquaFoam.withAlpha(150),
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        'الوصول إلى وجهتك',
-                        style: TextStyle(
-                          color: p.primaryFg.withAlpha(200),
-                          fontSize: 13,
+                      const SizedBox(width: 8),
+                      // دائرة السهم (أقصى اليسار) — east ثابت الاتجاه ما بينعكس
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: aquaFoam,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: aquaFoam.withAlpha(70),
+                              blurRadius: 14,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.east_rounded,
+                          color: cyberTeal,
+                          size: 24,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: p.primaryFg,
-                    shape: BoxShape.circle,
-                  ),
-                  // RTL: السهم للأمام = يسار
-                  child: Icon(Icons.arrow_back_rounded,
-                      color: p.primaryBg, size: 22),
-                ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -831,4 +903,136 @@ class _NavItem {
   final String label;
 
   const _NavItem(this.icon, this.label);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  رسومات زر "ابدأ الملاحة"
+// ════════════════════════════════════════════════════════════════
+
+/// البوصلة: دائرة غامقة + حلقة + 4 علامات (شمال/شرق/جنوب/غرب) + سهم ملاحة
+class _CompassIconPainter extends CustomPainter {
+  const _CompassIconPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final r = size.width / 2;
+    final ringR = r * 0.68;
+
+    // الدائرة الداخلية الغامقة (لون بني/غامق مثل التصميم)
+    canvas.drawCircle(
+      c,
+      ringR,
+      Paint()..color = const Color(0xFF3B2F33).withAlpha(215),
+    );
+
+    // الحلقة
+    canvas.drawCircle(
+      c,
+      ringR,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.4
+        ..color = aquaFoam.withAlpha(120),
+    );
+
+    // علامات الاتجاهات الأربع (بتطلع برا الحلقة)
+    final tick = Paint()
+      ..color = aquaFoam.withAlpha(150)
+      ..strokeWidth = 2.4
+      ..strokeCap = StrokeCap.round;
+    for (int k = 0; k < 4; k++) {
+      final a = k * math.pi / 2;
+      final d = Offset(math.cos(a), math.sin(a));
+      canvas.drawLine(c + d * (r * 0.52), c + d * (r * 0.98), tick);
+    }
+
+    // سهم الملاحة (متجه لأعلى اليمين)
+    final s = r * 0.40;
+    canvas.save();
+    canvas.translate(c.dx, c.dy);
+    canvas.rotate(math.pi / 4);
+
+    final arrow = Path()
+      ..moveTo(0, -s)
+      ..lineTo(s * 0.62, s * 0.85)
+      ..lineTo(0, s * 0.42)
+      ..lineTo(-s * 0.62, s * 0.85)
+      ..close();
+
+    canvas.drawPath(
+      arrow,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [aquaFoam, _accent2],
+        ).createShader(
+          Rect.fromCenter(center: Offset.zero, width: s * 2, height: s * 2),
+        ),
+    );
+
+    // النص الأيسر من السهم أغمق شوي لإعطاء عمق
+    final shade = Path()
+      ..moveTo(0, -s)
+      ..lineTo(0, s * 0.42)
+      ..lineTo(-s * 0.62, s * 0.85)
+      ..close();
+    canvas.drawPath(shade, Paint()..color = Colors.black.withAlpha(45));
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// السهم المنحني الشفاف: بيبدأ من تحت يسار وبيطلع لفوق يمين، وبيتلاشى عند الذيل
+class _CurvedArrowPainter extends CustomPainter {
+  const _CurvedArrowPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    final start = Offset(0, h);
+    final c1 = Offset(w * 0.38, h);
+    final c2 = Offset(w * 0.42, h * 0.30);
+    final end = Offset(w * 0.68, h * 0.26);
+
+    final shader = LinearGradient(
+      colors: [aquaFoam.withAlpha(0), aquaFoam.withAlpha(95)],
+    ).createShader(Offset.zero & size);
+
+    // الجسم
+    final shaft = Path()
+      ..moveTo(start.dx, start.dy)
+      ..cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, end.dx, end.dy);
+    canvas.drawPath(
+      shaft,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = h * 0.2
+        ..strokeCap = StrokeCap.butt
+        ..shader = shader,
+    );
+
+    // رأس السهم (بنفس اتجاه آخر المنحنى)
+    final dir = end - c2;
+    final unit = dir / dir.distance;
+    final perp = Offset(-unit.dy, unit.dx);
+    final headLen = h * 0.42;
+    final headW = h * 0.30;
+
+    final head = Path()
+      ..moveTo(end.dx + unit.dx * headLen, end.dy + unit.dy * headLen)
+      ..lineTo(end.dx + perp.dx * headW, end.dy + perp.dy * headW)
+      ..lineTo(end.dx - perp.dx * headW, end.dy - perp.dy * headW)
+      ..close();
+    canvas.drawPath(head, Paint()..shader = shader);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

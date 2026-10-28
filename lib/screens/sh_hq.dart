@@ -6,7 +6,7 @@ const Color _aquaFoam = Color(0xFF96FCDF);
 
 /// صورة الكلية (ضيفها في pubspec.yaml تحت assets).
 /// إذا الصورة مش موجودة بتظهر خلفية متدرجة.
-const String _collegeImage = 'image/tarb.jpeg';
+const String _collegeImage = 'image/sh_hq.jpeg';
 
 // ====================== نموذج البيانات ======================
 class _Place {
@@ -164,22 +164,6 @@ class _ShariaLawCollegeDetailsPageState
                 ),
               ),
             ),
-            // أيقونة تلمّح إن الصورة بتنفتح
-            Positioned(
-              top: top + 8,
-              left: 12,
-              child: IgnorePointer(
-                child: Container(
-                  padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withAlpha(70),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.fullscreen_rounded,
-                      color: Colors.white, size: 20),
-                ),
-              ),
-            ),
             Positioned(
               top: top + 8,
               right: 12,
@@ -205,7 +189,7 @@ class _ShariaLawCollegeDetailsPageState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'كلية العلوم التربوية',
+                    'كلية الشريعةوالحقوق',
                     style: TextStyle(
                       fontSize: 30,
                       fontWeight: FontWeight.w800,

@@ -23,12 +23,12 @@ const List<College> colleges = [
     nameEn: 'Faculty of Information Technology',
     icon: Icons.code_rounded,
     building: 11, // ⚠️ عدّل الرقم حسب الخريطة
-    imagePath: 'assets/images/it.png', // ⚠️ عدّل المسار لصورتك الفعلية
+    imagePath: 'assets/image/it.png', // ⚠️ عدّل المسار لصورتك الفعلية
   ),
   College(
     nameAr: 'كلية الهندسة',
     nameEn: 'Faculty of Engineering',
-    icon: Icons.engineering_outlined,   
+    icon: Icons.engineering_outlined,
     building: 0,
   ),
   College(
@@ -44,12 +44,6 @@ const List<College> colleges = [
     building: 0,
   ),
   College(
-    nameAr: 'كلية العلوم الطبية المساندة',
-    nameEn: 'Faculty of Allied Medical Sciences',
-    icon: Icons.biotech_outlined,
-    building: 0,
-  ),
-  College(
     nameAr: 'كلية العلوم1',
     nameEn: 'Faculty of Science',
     icon: Icons.science_outlined,
@@ -61,12 +55,12 @@ const List<College> colleges = [
     icon: Icons.science_outlined,
     building: 0,
   ),
- 
   College(
     nameAr: 'كلية الآداب',
     nameEn: 'Faculty of Arts',
     icon: Icons.menu_book_outlined,
     building: 0,
+    imagePath: 'assets/image/lit.jpg', // ✅ صورة كلية الآداب
   ),
   College(
     nameAr: 'كلية الشريعة',
@@ -98,7 +92,6 @@ const List<College> colleges = [
     icon: Icons.medication_outlined,
     building: 0,
   ),
- 
   College(
     nameAr: 'كلية الحقوق',
     nameEn: 'Faculty of Law',

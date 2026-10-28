@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'image_viewer.dart';
+
 const Color _cyberTeal = Color(0xFF03303B);
 const Color _aquaFoam = Color(0xFF96FCDF);
 
 /// صورة كلية الآداب (ضيفها في pubspec.yaml تحت assets).
-const String _heroImage = 'image/arts.jpeg';
+const String _heroImage = 'image/lit.jpg';
+const String _heroTag = 'arts-hero-image';
 
 class _Floor {
   final String name;
@@ -88,6 +89,45 @@ IconData _iconFor(String name) {
   return Icons.place_rounded;
 }
 
+/// عرض الصورة بملء الشاشة، ضغطة بأي مكان بتسكرها.
+class _FullImageViewer extends StatelessWidget {
+  final String imagePath;
+  final String heroTag;
+
+  const _FullImageViewer({required this.imagePath, required this.heroTag});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => Navigator.of(context).pop(),
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
+          child: Center(
+            child: Hero(
+              tag: heroTag,
+              child: InteractiveViewer(
+                minScale: 1,
+                maxScale: 4,
+                child: Image.asset(
+                  imagePath,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.broken_image_outlined,
+                    color: Colors.white54,
+                    size: 64,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class ArtsCollegeDetailsPage extends StatefulWidget {
   const ArtsCollegeDetailsPage({super.key});
 
@@ -157,88 +197,111 @@ class _ArtsCollegeDetailsPageState extends State<ArtsCollegeDetailsPage> {
     );
   }
 
+  // ====================== فتح الصورة كاملة ======================
+  void _openImage(BuildContext context) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        transitionDuration: const Duration(milliseconds: 250),
+        reverseTransitionDuration: const Duration(milliseconds: 200),
+        pageBuilder: (_, __, ___) => const _FullImageViewer(
+          imagePath: _heroImage,
+          heroTag: _heroTag,
+        ),
+        transitionsBuilder: (_, anim, __, child) =>
+            FadeTransition(opacity: anim, child: child),
+      ),
+    );
+  }
+
   // ====================== الهيدر (صورة الكلية) ======================
   Widget _buildHeader(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
 
-    return Container(
-      height: 250,
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            _heroImage,
-            fit: BoxFit.cover,
-            errorBuilder: (_, error, __) {
-              debugPrint('Arts college image error: $error');
-              return _gradBox();
-            },
-          ),
-          // تعتيم لتوضيح النص
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withAlpha(60),
-                  _cyberTeal.withAlpha(215),
+    return GestureDetector(
+      onTap: () => _openImage(context),
+      child: Container(
+        height: 250,
+        width: double.infinity,
+        clipBehavior: Clip.antiAlias,
+        decoration: const BoxDecoration(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Hero(
+              tag: _heroTag,
+              child: Image.asset(
+                _heroImage,
+                fit: BoxFit.cover,
+                errorBuilder: (_, error, __) {
+                  debugPrint('Arts college image error: $error');
+                  return _gradBox();
+                },
+              ),
+            ),
+            // تعتيم لتوضيح النص
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withAlpha(60),
+                    _cyberTeal.withAlpha(215),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              top: top + 8,
+              right: 12,
+              child: Material(
+                color: _aquaFoam.withAlpha(40),
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => Navigator.of(context).maybePop(),
+                  child: const Padding(
+                    padding: EdgeInsets.all(11),
+                    child: Icon(Icons.arrow_back_ios_new,
+                        color: _aquaFoam, size: 20),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 20,
+              left: 20,
+              bottom: 22,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'كلية الآداب',
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                      'Faculty of Arts',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: _aquaFoam.withAlpha(220),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
-          Positioned(
-            top: top + 8,
-            right: 12,
-            child: Material(
-              color: _aquaFoam.withAlpha(40),
-              shape: const CircleBorder(),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: () => Navigator.of(context).maybePop(),
-                child: const Padding(
-                  padding: EdgeInsets.all(11),
-                  child: Icon(Icons.arrow_back_ios_new,
-                      color: _aquaFoam, size: 20),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 20,
-            left: 20,
-            bottom: 22,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'كلية الآداب',
-                  style: TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Text(
-                    'Faculty of Arts',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: _aquaFoam.withAlpha(220),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

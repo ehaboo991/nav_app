@@ -1,16 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'user_location.dart';
 
 const Color _cyberTeal = Color(0xFF03303B);
 const Color _aquaFoam = Color(0xFF96FCDF);
+
+/// لون نقطة "موقعك" على الخريطة
+const Color _youBlue = Color(0xFF1A73E8);
 
 class MapViewerScreen extends StatefulWidget {
   final String? destination;
   final int? buildingNumber;
 
+  /// إذا true: بعد ما المستخدم يحدد موقعه الشاشة بترجع تلقائياً
+  /// (بنستخدمها لما نفتح الخريطة من شاشة "ابدأ الملاحة")
+  final bool popOnPick;
+
   const MapViewerScreen({
     super.key,
     this.destination,
     this.buildingNumber,
+    this.popOnPick = false,
   });
 
   @override
@@ -18,9 +28,12 @@ class MapViewerScreen extends StatefulWidget {
 }
 
 class _MapViewerScreenState extends State<MapViewerScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final TransformationController _controller = TransformationController();
   late final AnimationController _routeProgress;
+
+  /// نبض نقطة موقعك (بيشتغل بس لما يكون في موقع محدد)
+  late final AnimationController _pulse;
   Offset _doubleTapPos = Offset.zero;
 
   bool get _hasRoute =>
@@ -36,13 +49,67 @@ class _MapViewerScreenState extends State<MapViewerScreen>
     if (widget.destination != null && _hasRoute) {
       _routeProgress.forward();
     }
+
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    );
+    pickLocationMode.addListener(_onLocationStateChanged);
+    userLocationNotifier.addListener(_onLocationStateChanged);
+    _syncPulse();
   }
 
   @override
   void dispose() {
+    pickLocationMode.removeListener(_onLocationStateChanged);
+    userLocationNotifier.removeListener(_onLocationStateChanged);
     _controller.dispose();
     _routeProgress.dispose();
+    _pulse.dispose();
     super.dispose();
+  }
+
+  void _onLocationStateChanged() {
+    if (!mounted) return;
+    _syncPulse();
+    setState(() {});
+  }
+
+  void _syncPulse() {
+    if (userLocationNotifier.value != null) {
+      if (!_pulse.isAnimating) _pulse.repeat();
+    } else {
+      _pulse.stop();
+    }
+  }
+
+  /// تثبيت موقعك على النقطة [p] (نسبة من عرض/ارتفاع الخريطة من 0 لـ 1)
+  void _setLocation(Offset p) {
+    userLocationNotifier.value = Offset(
+      p.dx.clamp(0.0, 1.0).toDouble(),
+      p.dy.clamp(0.0, 1.0).toDouble(),
+    );
+    pickLocationMode.value = false;
+    HapticFeedback.lightImpact();
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(milliseconds: 1600),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: _aquaFoam,
+          content: const Text(
+            'تم تحديد موقعك على الخريطة',
+            style: TextStyle(color: _cyberTeal, fontWeight: FontWeight.w700),
+          ),
+        ),
+      );
+
+    // لما نفتح الخريطة من شاشة "ابدأ الملاحة" نرجع لها مباشرة
+    if (widget.popOnPick && mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   double get _currentScale => _controller.value.getMaxScaleOnAxis();
@@ -84,6 +151,9 @@ class _MapViewerScreenState extends State<MapViewerScreen>
 
   @override
   Widget build(BuildContext context) {
+    final picking = pickLocationMode.value;
+    final myLocation = userLocationNotifier.value;
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -97,6 +167,22 @@ class _MapViewerScreenState extends State<MapViewerScreen>
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
+          // تفعيل/إلغاء وضع "حدد موقعك"
+          IconButton(
+            tooltip: picking ? 'إلغاء تحديد الموقع' : 'حدد موقعك',
+            icon: Icon(
+              picking ? Icons.location_searching : Icons.my_location_rounded,
+              color: picking ? Colors.white : _aquaFoam,
+            ),
+            onPressed: () => pickLocationMode.value = !picking,
+          ),
+          // إزالة موقعك (بتظهر بس إذا في موقع محدد)
+          if (myLocation != null)
+            IconButton(
+              tooltip: 'إزالة موقعي',
+              icon: const Icon(Icons.location_off_rounded),
+              onPressed: () => userLocationNotifier.value = null,
+            ),
           IconButton(
             tooltip: 'تصغير',
             icon: const Icon(Icons.zoom_out),
@@ -118,7 +204,8 @@ class _MapViewerScreenState extends State<MapViewerScreen>
         children: [
           GestureDetector(
             onDoubleTapDown: (d) => _doubleTapPos = d.localPosition,
-            onDoubleTap: _handleDoubleTap,
+            // بوضع تحديد الموقع منعطّل التكبير بالضغطتين عشان ما يتعارض
+            onDoubleTap: picking ? null : _handleDoubleTap,
             child: InteractiveViewer(
               transformationController: _controller,
               minScale: 1.0,
@@ -126,40 +213,120 @@ class _MapViewerScreenState extends State<MapViewerScreen>
               child: Center(
                 child: AspectRatio(
                   aspectRatio: 1058 / 1322,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Hero(
-                        tag: 'Mutah_Map',
-                        child: Image.asset(
-                          'image/Mutah_Map.png',
-                          fit: BoxFit.fill,
-                          errorBuilder: (_, _, _) => const Center(
-                            child: Text(
-                              'تعذّر تحميل الخريطة',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (_hasRoute && widget.destination != null)
-                        Positioned.fill(
-                          child: AnimatedBuilder(
-                            animation: _routeProgress,
-                            builder: (context, _) => CustomPaint(
-                              painter: _MapRoutePainter(
-                                buildingNumber: widget.buildingNumber!,
-                                progress: _routeProgress.value,
+                  child: LayoutBuilder(
+                    builder: (context, box) => Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Hero(
+                          tag: 'Mutah_Map',
+                          child: Image.asset(
+                            'image/MUU.jpeg',
+                            fit: BoxFit.fill,
+                            errorBuilder: (_, _, _) => const Center(
+                              child: Text(
+                                'تعذّر تحميل الخريطة',
+                                style: TextStyle(color: Colors.white),
                               ),
                             ),
                           ),
                         ),
-                    ],
+                        if (_hasRoute && widget.destination != null)
+                          Positioned.fill(
+                            child: AnimatedBuilder(
+                              animation: _routeProgress,
+                              builder: (context, _) => CustomPaint(
+                                painter: _MapRoutePainter(
+                                  buildingNumber: widget.buildingNumber!,
+                                  progress: _routeProgress.value,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                        // نقطة موقعك (زرقاء نابضة)
+                        if (myLocation != null)
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: AnimatedBuilder(
+                                animation: _pulse,
+                                builder: (context, _) => CustomPaint(
+                                  painter: _UserLocationPainter(
+                                    location: myLocation,
+                                    pulse: _pulse.value,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                        // طبقة اللمس لتحديد الموقع:
+                        // • بوضع التحديد: ضغطة وحدة على أي مكان
+                        // • برا وضع التحديد: ضغطة مطوّلة على أي مكان
+                        Positioned.fill(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onTapUp: picking
+                                ? (d) => _setLocation(Offset(
+                                      d.localPosition.dx / box.maxWidth,
+                                      d.localPosition.dy / box.maxHeight,
+                                    ))
+                                : null,
+                            onLongPressStart: (d) => _setLocation(Offset(
+                              d.localPosition.dx / box.maxWidth,
+                              d.localPosition.dy / box.maxHeight,
+                            )),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
+
+          // شريط التعليمات بوضع "حدد موقعك"
+          if (picking)
+            Positioned(
+              top: (_hasRoute && widget.destination != null) ? 62 : 14,
+              left: 14,
+              right: 14,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: _cyberTeal.withAlpha(240),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: _aquaFoam.withAlpha(110)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(14, 6, 6, 6),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.touch_app_rounded,
+                          color: _aquaFoam, size: 22),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'اضغط على أي مكان بالخريطة لتحديد موقعك',
+                          style: TextStyle(
+                            color: _aquaFoam,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'إلغاء',
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.close_rounded,
+                            color: _aquaFoam, size: 20),
+                        onPressed: () => pickLocationMode.value = false,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
           if (_hasRoute && widget.destination != null)
             Positioned(
               top: 14,
@@ -276,6 +443,47 @@ class _MapViewerScreenState extends State<MapViewerScreen>
       ),
     );
   }
+}
+
+/// نقطة "موقعك": دائرة زرقاء بحلقة بيضاء + موجة بتكبر وبتتلاشى
+class _UserLocationPainter extends CustomPainter {
+  final Offset location; // نسبة 0..1 من حجم الخريطة
+  final double pulse; // 0..1
+
+  const _UserLocationPainter({required this.location, required this.pulse});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(
+      location.dx * size.width,
+      location.dy * size.height,
+    );
+    final r = size.width * .016;
+
+    // الموجة النابضة
+    canvas.drawCircle(
+      center,
+      r * (1.6 + pulse * 2.8),
+      Paint()..color = _youBlue.withAlpha(((1 - pulse) * 95).round()),
+    );
+
+    // ظل خفيف
+    canvas.drawCircle(
+      center.translate(0, r * .25),
+      r * 1.6,
+      Paint()
+        ..color = Colors.black.withAlpha(60)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+
+    // الحلقة البيضاء + النقطة الزرقاء
+    canvas.drawCircle(center, r * 1.6, Paint()..color = Colors.white);
+    canvas.drawCircle(center, r * 1.15, Paint()..color = _youBlue);
+  }
+
+  @override
+  bool shouldRepaint(covariant _UserLocationPainter oldDelegate) =>
+      oldDelegate.location != location || oldDelegate.pulse != pulse;
 }
 
 class _MapRoutePainter extends CustomPainter {

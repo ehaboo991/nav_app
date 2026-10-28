@@ -1,10 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart'; // حركة الظهور واحد ورا الثاني
 import 'favourite_screen.dart' show favoritesNotifier, toggleFavorite;
 import 'home_page_screens.dart' show cyberTeal, aquaFoam;
 
 /// لون القلب (نفس اللون المستخدم بشاشة الكليات وشاشة المفضلة)
 const Color _heartRed = Color(0xFFFF4D6D);
+
+/// انتقال بطيء: بيخلي حركة الـ Hero (الصورة بتكبر من الكرت) أبطأ
+const Duration _slowDuration = Duration(milliseconds: 400); // غيّر الرقم حسب ذوقك
+
+/// ظهور الكروت واحد ورا الثاني (Staggered)
+const int _staggerMs = 250; // الفاصل بين كل كرت والتاني (زيدو لو بدك أبطأ)
+const int _staggerMaxItems = 10; // آخر كرت بياخد تأخير، الباقي بيظهر معه
+
+/// تلاشي + انزلاق من تحت، والكرت رقم i بيتأخر i × 80ms
+Widget _appear(int i, Widget child) {
+  return child
+      .animate(delay: (_staggerMs * i.clamp(0, _staggerMaxItems)).ms)
+      .fadeIn(duration: 400.ms, curve: Curves.easeOut)
+      .slideY(
+        begin: 0.2,
+        end: 0,
+        duration: 400.ms,
+        curve: Curves.easeOutCubic,
+      );
+}
+
+Route<T> _slowRoute<T>(Widget page) {
+  return PageRouteBuilder<T>(
+    transitionDuration: _slowDuration,
+    reverseTransitionDuration: _slowDuration,
+    pageBuilder: (_, _, _) => page,
+    transitionsBuilder: (_, animation, _, child) => FadeTransition(
+      opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+      child: child,
+    ),
+  );
+}
 
 class _Hall {
   final String nameAr;
@@ -44,6 +77,7 @@ const List<_Hall> _complexes = [
     'Al-Kindi Complex',
     'image/alkindi.jpeg',
     Icons.business_rounded,
+    true, // صار بيفتح صفحة المعلومات
   ),
   _Hall(
     'مجمع الشهيد',
@@ -71,7 +105,7 @@ class _OtherPlacesScreenState extends State<OtherPlacesScreen> {
   void _openComplex(_Hall hall) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => _ComplexDetailsScreen(hall: hall)),
+      _slowRoute(_ComplexDetailsScreen(hall: hall)),
     );
   }
 
@@ -152,13 +186,16 @@ class _OtherPlacesScreenState extends State<OtherPlacesScreen> {
                         key: ValueKey(_tab),
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          for (final place in _currentList) ...[
-                            _HallCard(
-                              hall: place,
-                              dark: dark,
-                              onTap: place.hasDetails
-                                  ? () => _openComplex(place)
-                                  : null,
+                          for (int i = 0; i < _currentList.length; i++) ...[
+                            _appear(
+                              i,
+                              _HallCard(
+                                hall: _currentList[i],
+                                dark: dark,
+                                onTap: _currentList[i].hasDetails
+                                    ? () => _openComplex(_currentList[i])
+                                    : null,
+                              ),
                             ),
                             const SizedBox(height: 16),
                           ],
@@ -369,7 +406,7 @@ class _HallCard extends StatelessWidget {
     }
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => _FullImageScreen(hall: hall)),
+      _slowRoute(_FullImageScreen(hall: hall)),
     );
   }
 
@@ -656,8 +693,8 @@ class _LibraryContentState extends State<LibraryContent> {
   void _openCoverFull() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const _FullImageScreen(
+      _slowRoute(
+        const _FullImageScreen(
           hall: _Hall('مكتبة الجامعة', 'University Library', _kInsideCover),
         ),
       ),
@@ -1015,7 +1052,7 @@ class _ItemRow extends StatelessWidget {
 }
 
 // ════════════════════════════════════════════════════════════════
-//  صفحة معلومات المجمع القديم (كل طابق لحاله)
+//  صفحة معلومات المجمع (كل طابق لحاله)
 // ════════════════════════════════════════════════════════════════
 
 class _InfoGroup {
@@ -1099,6 +1136,96 @@ const List<_ComplexFloor> _oldComplexFloors = [
   ]),
 ];
 
+/// طوابق مجمع الكندي
+const List<_ComplexFloor> _kindiFloors = [
+  _ComplexFloor('الطابق الأول', 'First Floor', [
+    _InfoGroup(
+      'قاعات التدريس',
+      Icons.class_rounded,
+      items: ['101', '102', '103', '104', '105', '106'],
+      chips: true,
+    ),
+    _InfoGroup(
+      'المدرجات',
+      Icons.event_seat_rounded,
+      items: ['مدرج الخوارزمي', 'مدرج'],
+    ),
+    _InfoGroup(
+      'قاعة متعددة الأغراض 1',
+      Icons.groups_rounded,
+    ),
+    _InfoGroup(
+      'مكتب الأمن الجامعي',
+      Icons.security_rounded,
+    ),
+    _InfoGroup(
+      'المرافق',
+      Icons.wc_rounded,
+      items: ['حمام طلاب', 'حمام طالبات'],
+    ),
+  ]),
+  _ComplexFloor('الطابق الثاني', 'Second Floor', [
+    _InfoGroup(
+      'قاعات التدريس',
+      Icons.class_rounded,
+      items: ['201', '202', '203', '205', '206', '207', '208', '209'],
+      chips: true,
+    ),
+    _InfoGroup(
+      'مدرج',
+      Icons.event_seat_rounded,
+    ),
+    _InfoGroup(
+      'قاعة متعددة الأغراض 2',
+      Icons.groups_rounded,
+    ),
+    _InfoGroup(
+      'المرافق',
+      Icons.wc_rounded,
+      items: [
+        'حمام طالبات',
+        'حمام طلاب (1)',
+        'حمام طلاب (2)',
+      ],
+    ),
+  ]),
+  _ComplexFloor('الطابق الثالث', 'Third Floor', [
+    _InfoGroup(
+      'قاعات التدريس',
+      Icons.class_rounded,
+      items: ['203', '205', '206', '207', '208', '209', '210'],
+      chips: true,
+    ),
+    _InfoGroup(
+      'قاعة Modeling Room',
+      Icons.view_in_ar_rounded,
+    ),
+    _InfoGroup(
+      'المختبرات',
+      Icons.computer_rounded,
+      items: ['Lab B – 211', 'Lab A – 212'],
+    ),
+    _InfoGroup(
+      'Studio 1A – 203',
+      Icons.draw_rounded,
+    ),
+    _InfoGroup(
+      'قسم العمارة (Architecture Department)',
+      Icons.architecture_rounded,
+      items: [
+        '200 – مكتب القسم (Department Office)',
+        '201 – مكتب أعضاء هيئة التدريس (Faculty Office)',
+        '202 – مكتب أعضاء هيئة التدريس (Faculty Office)',
+      ],
+    ),
+    _InfoGroup(
+      'المرافق',
+      Icons.wc_rounded,
+      items: ['حمام طلاب (1)', 'حمام طلاب (2)', 'حمام طلاب (3)'],
+    ),
+  ]),
+];
+
 class _ComplexDetailsScreen extends StatefulWidget {
   final _Hall hall;
   const _ComplexDetailsScreen({required this.hall});
@@ -1110,10 +1237,14 @@ class _ComplexDetailsScreen extends StatefulWidget {
 class _ComplexDetailsScreenState extends State<_ComplexDetailsScreen> {
   int _floor = 0;
 
+  /// طوابق المجمع الحالي
+  List<_ComplexFloor> get _complexFloors =>
+      widget.hall.nameAr == 'مجمع الكندي' ? _kindiFloors : _oldComplexFloors;
+
   void _openCoverFull() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => _FullImageScreen(hall: widget.hall)),
+      _slowRoute(_FullImageScreen(hall: widget.hall)),
     );
   }
 
@@ -1167,27 +1298,31 @@ class _ComplexDetailsScreenState extends State<_ComplexDetailsScreen> {
                       children: [
                         GestureDetector(
                           onTap: _openCoverFull,
-                          child: Image.asset(
-                            hall.image,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, error, _) {
-                              debugPrint('Complex cover failed: $error');
-                              return Container(
-                                decoration: const BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topRight,
-                                    end: Alignment.bottomLeft,
-                                    colors: [cyberTeal, Color(0xFF0A5566)],
+                          // Hero: الصورة بتطير من الكرت لغلاف الصفحة (نفس tag الكرت)
+                          child: Hero(
+                            tag: 'hall_${hall.image}',
+                            child: Image.asset(
+                              hall.image,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, error, _) {
+                                debugPrint('Complex cover failed: $error');
+                                return Container(
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topRight,
+                                      end: Alignment.bottomLeft,
+                                      colors: [cyberTeal, Color(0xFF0A5566)],
+                                    ),
                                   ),
-                                ),
-                                alignment: Alignment.center,
-                                child: Icon(
-                                  hall.icon,
-                                  size: 80,
-                                  color: aquaFoam.withAlpha(90),
-                                ),
-                              );
-                            },
+                                  alignment: Alignment.center,
+                                  child: Icon(
+                                    hall.icon,
+                                    size: 80,
+                                    color: aquaFoam.withAlpha(90),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ),
 
@@ -1326,11 +1461,11 @@ class _ComplexDetailsScreenState extends State<_ComplexDetailsScreen> {
                       dark: dark,
                       title: title,
                       labels: [
-                        for (final f in _oldComplexFloors)
+                        for (final f in _complexFloors)
                           f.ar.replaceFirst('الطابق ', ''),
                       ],
                       badges: [
-                        for (int i = 0; i < _oldComplexFloors.length; i++)
+                        for (int i = 0; i < _complexFloors.length; i++)
                           '${i + 1}',
                       ],
                     ),
@@ -1341,7 +1476,7 @@ class _ComplexDetailsScreenState extends State<_ComplexDetailsScreen> {
                       duration: const Duration(milliseconds: 250),
                       child: _ComplexFloorCard(
                         key: ValueKey(_floor),
-                        floor: _oldComplexFloors[_floor],
+                        floor: _complexFloors[_floor],
                         dark: dark,
                         title: title,
                         sub: sub,
@@ -1605,13 +1740,13 @@ List<PlaceInfo> get favoritablePlaces => [
         PlaceInfo(h.nameAr, h.nameEn, h.image, h.icon),
     ];
 
-/// بتفتح المكان: صفحة المعلومات إذا إلو (المجمع القديم)، وإلا الصورة بملء الشاشة
+/// بتفتح المكان: صفحة المعلومات إذا إلو (المجمع القديم / الكندي)، وإلا الصورة بملء الشاشة
 void openPlace(BuildContext context, String nameAr) {
   final hall = _allPlaces.firstWhere((h) => h.nameAr == nameAr);
   Navigator.push(
     context,
-    MaterialPageRoute(
-      builder: (_) => hall.hasDetails
+    _slowRoute(
+      hall.hasDetails
           ? _ComplexDetailsScreen(hall: hall)
           : _FullImageScreen(hall: hall),
     ),
