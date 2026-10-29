@@ -4,17 +4,12 @@ import '../widgets/app_logo.dart';
 import '../widgets/brand_title.dart';
 import '../widgets/main_button.dart';
 import '../widgets/waves_painter.dart';
-import 'login_screen.dart'; // <-- جديد
+import 'login_screen.dart';
+
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
-  void _soon(BuildContext context, String label) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(label)),
-    );
-  }
-
-  // <-- جديد: يفتح شاشة الـ login بانتقال fade ناعم
+  // يفتح شاشة الـ login بانتقال fade ناعم
   void _openLogin(BuildContext context) {
     Navigator.of(context).push(
       PageRouteBuilder(
@@ -45,7 +40,7 @@ class WelcomeScreen extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(child: CustomPaint(painter: WavesPainter())),
-            
+
             SafeArea(
               child: SingleChildScrollView(
                 child: Column(
@@ -68,7 +63,8 @@ class WelcomeScreen extends StatelessWidget {
                               'University Indoor Navigation System',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: AppColors.cyberTeal.withValues(alpha: 0.75),
+                                color:
+                                    AppColors.cyberTeal.withValues(alpha: 0.75),
                               ),
                             ),
                           ],
@@ -116,7 +112,8 @@ class WelcomeScreen extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 17,
                                 height: 1.3,
-                                color: AppColors.cyberTeal.withValues(alpha: 0.7),
+                                color:
+                                    AppColors.cyberTeal.withValues(alpha: 0.7),
                               ),
                             ),
                           ],
@@ -131,25 +128,12 @@ class WelcomeScreen extends StatelessWidget {
                     const SizedBox(height: 22),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Column(
-                        children: [
-                          MainButton(
-                            arabic: ' تسجيل الدخول',
-                            english: 'Student Login',
-                            icon: Icons.person,
-                            filled: true,
-                             onTap: () => _openLogin(context), // <-- تغيّر
-                           
-                          ),
-                          const SizedBox(height: 14),
-                          MainButton(
-                            arabic: 'ابدأ كزائر ',
-                            english: 'Explore as Guest',
-                            icon: Icons.school,
-                            filled: false,
-                             onTap: () => _openLogin(context),
-                          ),
-                        ],
+                      child: MainButton(
+                        arabic: ' تسجيل الدخول',
+                        english: 'Student Login',
+                        icon: Icons.person,
+                        filled: true,
+                        onTap: () => _openLogin(context),
                       ),
                     ),
                     const SizedBox(height: 24),

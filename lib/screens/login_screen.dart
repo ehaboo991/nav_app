@@ -1,10 +1,12 @@
+import 'dart:ui' show lerpDouble;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app_colors.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/tappable_logo.dart';
-import 'home_page_screens.dart'; // ← التعديل: نفس اسم الملف الفعلي
-import 'user_session_screen.dart'; // ← جلسة المستخدم (بتغذّي شاشة حسابي)
+import 'home_page_screens.dart';
+import 'user_session_screen.dart'; // جلسة المستخدم (بتغذّي شاشة حسابي)
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,10 +15,14 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   /// طول الرقم الجامعي وكلمة المرور
   static const int _idLength = 12;
   static const int _passLength = 6;
+
+  /// عمق انحناء حافة الهيدر السفلية
+  static const double _curveDepth = 44;
 
   final _formKey = GlobalKey<FormState>();
   final _idCtrl = TextEditingController();
@@ -24,11 +30,28 @@ class _LoginScreenState extends State<LoginScreen> {
   final _idFocus = FocusNode();
   final _passFocus = FocusNode();
 
-  bool _open = false;
   bool _hidePass = true;
   bool _loading = false;
 
+  // ───────── الأنيميشن (نفس تسلسل الفيديو) ─────────
+  late final AnimationController _ctrl;
+  late final Animation<double> _reveal; // الهيدر ينزل ويكبر
+  late final Animation<double> _titleAnim; // العنوان
+  late final Animation<double> _fieldsAnim; // الحقول
+  late final Animation<double> _buttonAnim; // زر الدخول
+  late final Animation<double> _bottomAnim; // "أو" + الزر السفلي
+
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+
+  // ───────── الألوان ─────────
+  // داكن: الصفحة Cyber Teal والهيدر Aqua Foam (مثل الفيديو)
+  // فاتح: بنعكسهم عشان يضل التباين واضح
+  Color get _pageColor =>
+      _isDark ? AppColors.cyberTeal : AppColors.aquaFoam;
+  Color get _onPage => _isDark ? AppColors.aquaFoam : AppColors.cyberTeal;
+  Color get _headerColor =>
+      _isDark ? AppColors.aquaFoam : AppColors.cyberTeal;
+  Color get _onHeader => _isDark ? AppColors.cyberTeal : AppColors.aquaFoam;
 
   /// بتخفي كيبورد النظام لو طلع لأي سبب
   void _hideSystemKeyboard() {
@@ -38,16 +61,38 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+
     _idFocus.addListener(() {
       if (_idFocus.hasFocus) _hideSystemKeyboard();
     });
     _passFocus.addListener(() {
       if (_passFocus.hasFocus) _hideSystemKeyboard();
     });
+
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    );
+
+    CurvedAnimation interval(double begin, double end, Curve curve) {
+      return CurvedAnimation(
+        parent: _ctrl,
+        curve: Interval(begin, end, curve: curve),
+      );
+    }
+
+    _reveal = interval(0.00, 0.50, Curves.easeOutCubic);
+    _titleAnim = interval(0.30, 0.55, Curves.easeOut);
+    _fieldsAnim = interval(0.45, 0.72, Curves.easeOut);
+    _buttonAnim = interval(0.60, 0.85, Curves.easeOut);
+    _bottomAnim = interval(0.75, 1.00, Curves.easeOutCubic);
+
+    _ctrl.forward();
   }
 
   @override
   void dispose() {
+    _ctrl.dispose();
     _idCtrl.dispose();
     _passCtrl.dispose();
     _idFocus.dispose();
@@ -60,16 +105,6 @@ class _LoginScreenState extends State<LoginScreen> {
   /// TODO: بدّلها بطلب حقيقي (API / Firebase / قاعدة بيانات الجامعة)
   /// وارجع منها الاسم والكلية والتخصص الفعليين.
   Future<UserProfile> _fetchProfile(String studentId, String password) async {
-    // مثال عند وجود API:
-    // final res = await http.post(Uri.parse('https://.../login'), body: {...});
-    // final data = jsonDecode(res.body);
-    // return UserProfile(
-    //   name: data['name'],
-    //   studentId: data['studentId'],
-    //   college: data['college'],
-    //   major: data['major'],
-    // );
-
     await Future.delayed(const Duration(seconds: 1)); // محاكاة التحميل
     return UserProfile(
       name: 'طالب مؤتة',
@@ -100,7 +135,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
       setState(() => _loading = false);
 
-      // Open HomePageScreen
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => const HomePageScreen(),
@@ -114,7 +148,8 @@ class _LoginScreenState extends State<LoginScreen> {
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('تعذّر تسجيل الدخول'),
-          content: const Text('تأكد من الرقم الجامعي وكلمة المرور وحاول مرة ثانية.'),
+          content: const Text(
+              'تأكد من الرقم الجامعي وكلمة المرور وحاول مرة ثانية.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -126,101 +161,274 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// دخول كزائر (الزر السفلي، مثل زر Sign up بالفيديو)
+  void _continueAsGuest() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const HomePageScreen(),
+      ),
+    );
+  }
+
+  // ───────── البناء ─────────
   @override
   Widget build(BuildContext context) {
-    final bg = _isDark
-        ? const Color(0xFF01181E)
-        : const Color.fromARGB(255, 183, 241, 223);
-    final mainColor = _isDark ? AppColors.aquaFoam : AppColors.cyberTeal;
+    final topPad = MediaQuery.of(context).padding.top;
 
     return Scaffold(
-      backgroundColor: bg,
+      backgroundColor: _pageColor,
       resizeToAvoidBottomInset: true,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Align(
-              alignment: Alignment.topLeft,
-              child: IconButton(
-                icon: Icon(
-                  Icons.arrow_back_ios_new,
-                  color: mainColor,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildHeader(topPad),
+                    Expanded(child: _buildBottom()),
+                  ],
                 ),
-                onPressed: () => Navigator.of(context).maybePop(),
               ),
             ),
-            Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+          );
+        },
+      ),
+    );
+  }
+
+  /// الهيدر الملوّن بحافة منحنية، بينزل ويكبر مثل الفيديو
+  Widget _buildHeader(double topPad) {
+    return AnimatedBuilder(
+      animation: _reveal,
+      builder: (context, child) {
+        return ClipPath(
+          clipper: _CurvedHeaderClipper(
+            progress: _reveal.value,
+            startHeight: topPad + 70,
+            curveDepth: _curveDepth,
+          ),
+          child: child,
+        );
+      },
+      child: Container(
+        color: _headerColor,
+        child: Stack(
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                24,
+                topPad + 20,
+                24,
+                _curveDepth + 28,
+              ),
+              child: Form(
+                key: _formKey,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Animated logo
-                    Hero(
-                      tag: logoHeroTag,
-                      flightShuttleBuilder: logoShuttle,
-                      child: AnimatedScale(
-                        scale: _open ? 0.7 : 1.0,
-                        duration: const Duration(milliseconds: 500),
-                        curve: Curves.easeOutBack,
-                        child: TappableLogo(
-                          size: 130,
-                          onTap: () {
-                            setState(() => _open = !_open);
-                          },
+                    // الشعار (Hero) - بنحطه بدائرة بلون خلفيته القديمة
+                    // عشان يضل واضح فوق الهيدر
+                    Center(
+                      child: _stagger(
+                        _titleAnim,
+                        Hero(
+                          tag: logoHeroTag,
+                          flightShuttleBuilder: logoShuttle,
+                          child: Container(
+                            width: 104,
+                            height: 104,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _isDark
+                                  ? const Color(0xFF01181E)
+                                  : const Color.fromARGB(255, 183, 241, 223),
+                            ),
+                            child: TappableLogo(size: 80, onTap: () {}),
+                          ),
                         ),
                       ),
                     ),
 
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 400),
-                      child: _open
-                          ? const SizedBox.shrink()
-                          : Padding(
-                              key: const ValueKey('hint'),
-                              padding: const EdgeInsets.only(top: 12),
-                              child: Text(
-                                'اضغط على الشعار لتسجيل الدخول\n'
-                                'Tap the logo to sign in',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: mainColor.withValues(alpha: 0.7),
-                                  fontSize: 13,
-                                  height: 1.5,
-                                ),
-                              ),
+                    const SizedBox(height: 18),
+
+                    _stagger(
+                      _titleAnim,
+                      Column(
+                        children: [
+                          Text(
+                            'MUTAH-NAV',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: _onHeader,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 3,
                             ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'سجّل الدخول للمتابعة\nPlease login to continue',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: _onHeader.withValues(alpha: 0.7),
+                              fontSize: 12.5,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
 
-                    // Animated login form
-                    AnimatedSize(
-                      duration: const Duration(milliseconds: 600),
-                      curve: Curves.easeOutCubic,
-                      alignment: Alignment.topCenter,
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 500),
-                        transitionBuilder: (child, anim) {
-                          return FadeTransition(
-                            opacity: anim,
-                            child: SlideTransition(
-                              position: Tween<Offset>(
-                                begin: const Offset(0, 0.08),
-                                end: Offset.zero,
-                              ).animate(anim),
-                              child: child,
-                            ),
-                          );
+                    const SizedBox(height: 26),
+
+                    // الرقم الجامعي: 12 رقم فقط
+                    _stagger(
+                      _fieldsAnim,
+                      _field(
+                        controller: _idCtrl,
+                        focusNode: _idFocus,
+                        label: 'الرقم الجامعي / Student ID',
+                        icon: Icons.badge_outlined,
+                        action: TextInputAction.next,
+                        onSubmitted: (_) => _passFocus.requestFocus(),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(_idLength),
+                        ],
+                        validator: (value) {
+                          final v = value?.trim() ?? '';
+                          if (v.isEmpty) return 'أدخل الرقم الجامعي';
+                          if (v.length != _idLength) {
+                            return 'الرقم الجامعي يتكوّن من $_idLength رقم';
+                          }
+                          return null;
                         },
-                        child: _open
-                            ? _buildForm()
-                            : const SizedBox(
-                                key: ValueKey('empty'),
-                                width: double.infinity,
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // كلمة المرور: 6 أرقام فقط
+                    _stagger(
+                      _fieldsAnim,
+                      _field(
+                        controller: _passCtrl,
+                        focusNode: _passFocus,
+                        label: 'كلمة المرور / Password',
+                        icon: Icons.lock_outline,
+                        obscure: _hidePass,
+                        action: TextInputAction.done,
+                        onSubmitted: (_) => _loading ? null : _submit(),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(_passLength),
+                        ],
+                        suffix: IconButton(
+                          icon: Icon(
+                            _hidePass
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: _onHeader.withValues(alpha: 0.6),
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            setState(() => _hidePass = !_hidePass);
+                          },
+                        ),
+                        validator: (value) {
+                          final v = value ?? '';
+                          if (v.isEmpty) return 'أدخل كلمة المرور';
+                          if (v.length != _passLength) {
+                            return 'كلمة المرور تتكوّن من $_passLength أرقام';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    // زر تسجيل الدخول
+                    _stagger(
+                      _buttonAnim,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(
+                            height: 52,
+                            child: ElevatedButton(
+                              onPressed: _loading ? null : _submit,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _onHeader,
+                                foregroundColor: _headerColor,
+                                disabledBackgroundColor:
+                                    _onHeader.withValues(alpha: 0.5),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                elevation: 0,
                               ),
+                              child: _loading
+                                  ? SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        color: _headerColor,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'تسجيل الدخول  |  LOGIN',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: TextButton(
+                              // TODO: اربطها بصفحة استعادة كلمة المرور
+                              onPressed: () {},
+                              style: TextButton.styleFrom(
+                                foregroundColor:
+                                    _onHeader.withValues(alpha: 0.75),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 4),
+                              ),
+                              child: const Text(
+                                'نسيت كلمة المرور؟  |  Forgot password?',
+                                style: TextStyle(fontSize: 11.5),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
+              ),
+            ),
+
+            // زر الرجوع
+            Positioned(
+              top: topPad + 4,
+              left: 4,
+              child: IconButton(
+                icon: Icon(
+                  Icons.arrow_back_ios_new,
+                  color: _onHeader,
+                  size: 20,
+                ),
+                onPressed: () => Navigator.of(context).maybePop(),
               ),
             ),
           ],
@@ -229,150 +437,70 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildForm() {
-    final mainColor = _isDark ? AppColors.aquaFoam : AppColors.cyberTeal;
-    final cardColor =
-        _isDark ? const Color(0xFF042A33) : AppColors.aquaFoamLight;
-
-    return Container(
-      key: const ValueKey('form'),
-      constraints: const BoxConstraints(maxWidth: 420),
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: mainColor.withValues(alpha: 0.15),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.cyberTeal.withValues(alpha: 0.08),
-            blurRadius: 25,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'مرحباً بك  •  Welcome',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: mainColor,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // الرقم الجامعي: 12 رقم فقط
-            _field(
-              controller: _idCtrl,
-              focusNode: _idFocus,
-              label: 'الرقم الجامعي / Student ID',
-              icon: Icons.badge_outlined,
-              action: TextInputAction.next,
-              onSubmitted: (_) => _passFocus.requestFocus(),
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(_idLength),
-              ],
-              validator: (value) {
-                final v = value?.trim() ?? '';
-                if (v.isEmpty) {
-                  return 'أدخل الرقم الجامعي';
-                }
-                if (v.length != _idLength) {
-                  return 'الرقم الجامعي يتكوّن من $_idLength رقم';
-                }
-                return null;
-              },
-            ),
-
-            const SizedBox(height: 14),
-
-            // كلمة المرور: 6 أرقام فقط
-            _field(
-              controller: _passCtrl,
-              focusNode: _passFocus,
-              label: 'كلمة المرور / Password',
-              icon: Icons.lock_outline,
-              obscure: _hidePass,
-              action: TextInputAction.done,
-              onSubmitted: (_) => _loading ? null : _submit(),
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(_passLength),
-              ],
-              suffix: IconButton(
-                icon: Icon(
-                  _hidePass ? Icons.visibility_off : Icons.visibility,
-                  color: AppColors.cyberTeal.withValues(alpha: 0.6),
-                  size: 20,
-                ),
-                onPressed: () {
-                  setState(() => _hidePass = !_hidePass);
-                },
-              ),
-              validator: (value) {
-                final v = value ?? '';
-                if (v.isEmpty) {
-                  return 'أدخل كلمة المرور';
-                }
-                if (v.length != _passLength) {
-                  return 'كلمة المرور تتكوّن من $_passLength أرقام';
-                }
-                return null;
-              },
-            ),
-
-            const SizedBox(height: 22),
-
-            SizedBox(
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _loading ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isDark
-                      ? AppColors.aquaFoam
-                      : AppColors.cyberTeal,
-                  foregroundColor: _isDark
-                      ? AppColors.cyberTeal
-                      : AppColors.aquaFoam,
-                  disabledBackgroundColor: mainColor.withValues(alpha: 0.5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+  /// الجزء السفلي: "أو" + الزر الثاني (مثل Sign up بالفيديو)
+  Widget _buildBottom() {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(32, 12, 32, 20),
+        child: Center(
+          child: _stagger(
+            _bottomAnim,
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'أو  |  OR',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: _onPage,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 2,
                   ),
-                  elevation: 0,
                 ),
-                child: _loading
-                    ? SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: _isDark
-                              ? AppColors.cyberTeal
-                              : AppColors.aquaFoam,
-                        ),
-                      )
-                    : const Text(
-                        'تسجيل الدخول  |  Sign in',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: _loading ? null : _continueAsGuest,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _onPage,
+                      foregroundColor: _pageColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
                       ),
-              ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'المتابعة كزائر  |  CONTINUE AS GUEST',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
+      ),
+    );
+  }
+
+  /// ظهور تدريجي + حركة خفيفة لفوق
+  Widget _stagger(Animation<double> anim, Widget child, {double dy = 0.15}) {
+    return FadeTransition(
+      opacity: anim,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: Offset(0, dy),
+          end: Offset.zero,
+        ).animate(anim),
+        child: child,
       ),
     );
   }
@@ -389,20 +517,19 @@ class _LoginScreenState extends State<LoginScreen> {
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
   }) {
-    OutlineInputBorder border(
-      Color color, {
-      double width = 1.0,
-    }) {
+    OutlineInputBorder border(Color color, {double width = 1.0}) {
       return OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(
-          color: color,
-          width: width,
-        ),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: color, width: width),
       );
     }
 
-    // حقول الإدخال تبقى بيضاء بالوضعين عشان النص يبقى واضح
+    // حقول مسطّحة بلون أغمق/أفتح شوي من الهيدر (مثل الفيديو)
+    final fill = Color.alphaBlend(
+      _onHeader.withValues(alpha: 0.10),
+      _headerColor,
+    );
+
     return TextFormField(
       controller: controller,
       focusNode: focusNode,
@@ -416,30 +543,61 @@ class _LoginScreenState extends State<LoginScreen> {
       autocorrect: false,
       inputFormatters: inputFormatters,
       validator: validator,
-      style: const TextStyle(
-        color: AppColors.cyberTeal,
-      ),
-      cursorColor: AppColors.cyberTeal,
+      style: TextStyle(color: _onHeader),
+      cursorColor: _onHeader,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(
-          color: AppColors.cyberTeal.withValues(alpha: 0.6),
+          color: _onHeader.withValues(alpha: 0.6),
           fontSize: 13,
         ),
+        floatingLabelStyle: TextStyle(color: _onHeader),
         prefixIcon: Icon(
           icon,
-          color: AppColors.cyberTeal.withValues(alpha: 0.6),
+          color: _onHeader.withValues(alpha: 0.6),
           size: 20,
         ),
         suffixIcon: suffix,
         filled: true,
-        fillColor: Colors.white,
-        enabledBorder: border(AppColors.cyberTeal.withValues(alpha: 0.2)),
-        focusedBorder: border(AppColors.cyberTeal, width: 1.5),
+        fillColor: fill,
+        enabledBorder: border(Colors.transparent),
+        focusedBorder: border(_onHeader, width: 1.5),
         errorBorder: border(Colors.redAccent),
         focusedErrorBorder: border(Colors.redAccent, width: 1.5),
         errorStyle: const TextStyle(color: Colors.redAccent),
       ),
     );
   }
+}
+
+/// قصّ الهيدر بحافة سفلية منحنية (شكل ابتسامة) وبتنزل مع الأنيميشن
+class _CurvedHeaderClipper extends CustomClipper<Path> {
+  _CurvedHeaderClipper({
+    required this.progress,
+    required this.startHeight,
+    required this.curveDepth,
+  });
+
+  final double progress;
+  final double startHeight;
+  final double curveDepth;
+
+  @override
+  Path getClip(Size size) {
+    final fullBottom = size.height - curveDepth;
+    final start = startHeight < fullBottom ? startHeight : fullBottom;
+    final y = lerpDouble(start, fullBottom, progress)!;
+
+    return Path()
+      ..lineTo(0, y)
+      ..quadraticBezierTo(size.width / 2, y + curveDepth * 2, size.width, y)
+      ..lineTo(size.width, 0)
+      ..close();
+  }
+
+  @override
+  bool shouldReclip(covariant _CurvedHeaderClipper old) =>
+      old.progress != progress ||
+      old.startHeight != startHeight ||
+      old.curveDepth != curveDepth;
 }
