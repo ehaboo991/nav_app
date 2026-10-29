@@ -956,5 +956,6 @@ class _CollegesScreenState extends State<CollegesScreen> {
         ],
       ),
     );
-  }
-}
+  }                                                 
+}   
+                         

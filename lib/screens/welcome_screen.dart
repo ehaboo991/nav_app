@@ -3,6 +3,7 @@ import '../app_colors.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/brand_title.dart';
 import '../widgets/main_button.dart';
+import '../widgets/motion.dart'; // ← جديد
 import '../widgets/waves_painter.dart';
 import 'login_screen.dart';
 
@@ -39,13 +40,24 @@ class WelcomeScreen extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            Positioned.fill(child: CustomPaint(painter: WavesPainter())),
+            // الأمواج: تظهر بـ fade هادي
+            Positioned.fill(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 1200),
+                curve: Curves.easeOut,
+                builder: (_, v, child) => Opacity(opacity: v, child: child),
+                child: CustomPaint(painter: WavesPainter()),
+              ),
+            ),
 
             SafeArea(
               child: SingleChildScrollView(
                 child: Column(
                   children: [
                     const SizedBox(height: 16),
+
+                    // اللوجو (Hero بدون لف) + العنوان ينزل بجانبه
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -55,85 +67,120 @@ class WelcomeScreen extends StatelessWidget {
                           child: AppLogo(size: 64),
                         ),
                         const SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const BrandTitle(fontSize: 32),
-                            Text(
-                              'University Indoor Navigation System',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color:
-                                    AppColors.cyberTeal.withValues(alpha: 0.75),
+                        FadeSlideIn(
+                          delay: const Duration(milliseconds: 150),
+                          offset: const Offset(0.15, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const BrandTitle(fontSize: 32),
+                              Text(
+                                'University Indoor Navigation System',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.cyberTeal
+                                      .withValues(alpha: 0.75),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'جامعة مؤتة',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.cyberTeal,
-                      ),
-                    ),
-                    Text(
-                      'MUTAH UNIVERSITY',
-                      style: TextStyle(
-                        fontSize: 11,
-                        letterSpacing: 3,
-                        color: AppColors.cyberTeal.withValues(alpha: 0.7),
+
+                    // اسم الجامعة
+                    FadeSlideIn(
+                      delay: const Duration(milliseconds: 300),
+                      child: Column(
+                        children: [
+                          const Text(
+                            'جامعة مؤتة',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.cyberTeal,
+                            ),
+                          ),
+                          Text(
+                            'MUTAH UNIVERSITY',
+                            style: TextStyle(
+                              fontSize: 11,
+                              letterSpacing: 3,
+                              color:
+                                  AppColors.cyberTeal.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 20),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 28),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Welcome to',
-                              style: TextStyle(
-                                fontSize: 36,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.cyberTeal,
-                                height: 1.1,
+
+                    // نص الترحيب
+                    FadeSlideIn(
+                      delay: const Duration(milliseconds: 450),
+                      offset: const Offset(-0.1, 0.1),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 28),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Welcome to',
+                                style: TextStyle(
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.cyberTeal,
+                                  height: 1.1,
+                                ),
                               ),
-                            ),
-                            const BrandTitle(fontSize: 36),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Find your way around\nMutah University.',
-                              style: TextStyle(
-                                fontSize: 17,
-                                height: 1.3,
-                                color:
-                                    AppColors.cyberTeal.withValues(alpha: 0.7),
+                              const BrandTitle(fontSize: 36),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Find your way around\nMutah University.',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  height: 1.3,
+                                  color: AppColors.cyberTeal
+                                      .withValues(alpha: 0.7),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 12),
-                    SizedBox(
-                      height: size.height * 0.40,
-                      child: const _MutahImage(),
+
+                    // الصورة: تطلع من تحت
+                    FadeSlideIn(
+                      delay: const Duration(milliseconds: 650),
+                      duration: const Duration(milliseconds: 800),
+                      offset: const Offset(0, 0.12),
+                      child: SizedBox(
+                        height: size.height * 0.40,
+                        child: const _MutahImage(),
+                      ),
                     ),
                     const SizedBox(height: 22),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: MainButton(
-                        arabic: ' تسجيل الدخول',
-                        english: 'Student Login',
-                        icon: Icons.person,
-                        filled: true,
-                        onTap: () => _openLogin(context),
+
+                    // الزر: يدخل أخيراً + تأثير ضغط
+                    FadeSlideIn(
+                      delay: const Duration(milliseconds: 850),
+                      offset: const Offset(0, 0.4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Pressable(
+                          child: MainButton(
+                            arabic: ' تسجيل الدخول',
+                            english: 'Student Login',
+                            icon: Icons.person,
+                            filled: true,
+                            onTap: () => _openLogin(context),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),

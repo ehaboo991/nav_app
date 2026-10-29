@@ -3,6 +3,7 @@ import 'package:animated_theme_switcher/animated_theme_switcher.dart';
 
 import 'screens/home_page_screens.dart'; // عشان appLightTheme / appDarkTheme
 import 'screens/splash_screen.dart';
+import 'widgets/motion.dart';
 
 void main() => runApp(const MyApp());
 
@@ -13,11 +14,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ThemeProvider(
       initTheme: appLightTheme,
-      duration: const Duration(milliseconds: 600), // أبطأ = رقم أكبر
+      duration: const Duration(milliseconds: 600),
       builder: (context, theme) => MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: theme, // الباكج بيبدّل هالثيم بنفسه (فاتح/داكن)
-        home: const SplashScreen(), // ← التعديل الأساسي
+        // نضيف الانتقال الناعم فوق الثيم (فاتح/داكن) بدون ما نخرب عليه
+        theme: theme.copyWith(pageTransitionsTheme: appPageTransitions),
+        home: const SplashScreen(),
       ),
     );
   }
