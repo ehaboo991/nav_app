@@ -2,11 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:animated_theme_switcher/animated_theme_switcher.dart';
 
 import 'screens/home_page_screens.dart'; // عشان appLightTheme / appDarkTheme
+import 'screens/notification.dart'; // 👈 جديد
+import 'screens/schedule_data.dart'; // 👈 جديد
 import 'screens/splash_screen.dart';
 import 'widgets/motion.dart';
 
-void main() => runApp(const MyApp());
-
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // 👈 جديد
+  await NotificationService.init(); // 👈 جديد: لازم قبل load
+  await ScheduleStore.load(); // 👈 جديد: بيحمّل الجدول وبيجدول الإشعارات
+  runApp(const MyApp());
+}
+ 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 

@@ -12,49 +12,62 @@ import 'start_navigation_screen.dart';
 import 'nav_ai_screen.dart';
 import 'other_places_screen.dart';
 import 'user_location.dart';
+import 'schedule_data.dart';
+import 'schedule_screen.dart';
+import 'next_card.dart';
 
 // ╔═══════════════════════════════════════════════╗
 // ║  اختار الباليت من هون:                        ║
 // ║  0 = Cyber Teal + Aqua Foam (الأصلية)         ║
 // ║  1 = Inkberry + Peach                         ║
 // ║  2 = Blueberry + Cream Soda                   ║
-// ║  3 = Quantum Blue + Ice Glass (الجديدة)       ║
+// ║  3 = Quantum Blue + Ice Glass                 ║
+// ║  4 = Zero Black + Ghost Green (الجديدة)       ║
 // ╚═══════════════════════════════════════════════╝
 const int kPalette = 0;
 
 // Inkberry #1A0B2E | Peach #FFB7A5
 // Blueberry #253B90 | Cream Soda #FEEFC8
 // Quantum Blue #2950F6 | Ice Glass #DFF8FD
-const Color cyberTeal = kPalette == 3
-    ? Color(0xFF2950F6)
-    : kPalette == 2
-        ? Color(0xFF253B90)
-        : kPalette == 1
-            ? Color(0xFF1A0B2E)
-            : Color(0xFF03303B);
-const Color aquaFoam = kPalette == 3
-    ? Color(0xFFDFF8FD)
-    : kPalette == 2
-        ? Color(0xFFFEEFC8)
-        : kPalette == 1
-            ? Color(0xFFFFB7A5)
-            : Color(0xFF96FCDF);
+// Zero Black #050505 | Ghost Green #D7FFE0
+const Color cyberTeal = kPalette == 4
+    ? Color(0xFF050505)
+    : kPalette == 3
+        ? Color(0xFF2950F6)
+        : kPalette == 2
+            ? Color(0xFF253B90)
+            : kPalette == 1
+                ? Color(0xFF1A0B2E)
+                : Color(0xFF03303B);
+const Color aquaFoam = kPalette == 4
+    ? Color(0xFFD7FFE0)
+    : kPalette == 3
+        ? Color(0xFFDFF8FD)
+        : kPalette == 2
+            ? Color(0xFFFEEFC8)
+            : kPalette == 1
+                ? Color(0xFFFFB7A5)
+                : Color(0xFF96FCDF);
 
 // درجات مشتقة للتدرجات
-const Color _deep2 = kPalette == 3
-    ? Color(0xFF4A70FF)
-    : kPalette == 2
-        ? Color(0xFF3552B0)
-        : kPalette == 1
-            ? Color(0xFF3A1B63)
-            : Color(0xFF0A5566);
-const Color _accent2 = kPalette == 3
-    ? Color(0xFFB3E4F2)
-    : kPalette == 2
-        ? Color(0xFFF5DB9A)
-        : kPalette == 1
-            ? Color(0xFFFF9C86)
-            : Color(0xFF5FD9BC);
+const Color _deep2 = kPalette == 4
+    ? Color(0xFF1E2A21)
+    : kPalette == 3
+        ? Color(0xFF4A70FF)
+        : kPalette == 2
+            ? Color(0xFF3552B0)
+            : kPalette == 1
+                ? Color(0xFF3A1B63)
+                : Color(0xFF0A5566);
+const Color _accent2 = kPalette == 4
+    ? Color(0xFF9EE6B0)
+    : kPalette == 3
+        ? Color(0xFFB3E4F2)
+        : kPalette == 2
+            ? Color(0xFFF5DB9A)
+            : kPalette == 1
+                ? Color(0xFFFF9C86)
+                : Color(0xFF5FD9BC);
 
 /// الثيمات اللي بنبدّل بينها بتأثير الدائرة (استخدمهم بـ main.dart كمان)
 final ThemeData appLightTheme = ThemeData(
@@ -82,39 +95,87 @@ class _Pal {
   final bool dark;
   const _Pal(this.dark);
 
-  // teal / ink / blueberry / quantum
-  static Color _pick(Color teal, Color ink, Color blue, Color quantum) =>
-      kPalette == 3
-          ? quantum
-          : kPalette == 2
-              ? blue
-              : (kPalette == 1 ? ink : teal);
+  // teal / ink / blueberry / quantum / zero
+  static Color _pick(
+    Color teal,
+    Color ink,
+    Color blue,
+    Color quantum,
+    Color zero,
+  ) =>
+      kPalette == 4
+          ? zero
+          : kPalette == 3
+              ? quantum
+              : kPalette == 2
+                  ? blue
+                  : (kPalette == 1 ? ink : teal);
 
   Color get bg => dark
-      ? _pick(const Color(0xFF01181E), const Color(0xFF0F0719),
-          const Color(0xFF0B1230), const Color(0xFF060B24))
-      : _pick(const Color(0xFFF2FFFB), const Color(0xFFFFF6F3),
-          const Color(0xFFFFF9EA), const Color(0xFFF3FCFF));
+      ? _pick(
+          const Color(0xFF01181E),
+          const Color(0xFF0F0719),
+          const Color(0xFF0B1230),
+          const Color(0xFF060B24),
+          const Color(0xFF030303),
+        )
+      : _pick(
+          const Color(0xFFF2FFFB),
+          const Color(0xFFFFF6F3),
+          const Color(0xFFFFF9EA),
+          const Color(0xFFF3FCFF),
+          const Color(0xFFF4FFF6),
+        );
   Color get surface => dark
-      ? _pick(const Color(0xFF042A33), const Color(0xFF241240),
-          const Color(0xFF142048), const Color(0xFF0E1740))
+      ? _pick(
+          const Color(0xFF042A33),
+          const Color(0xFF241240),
+          const Color(0xFF142048),
+          const Color(0xFF0E1740),
+          const Color(0xFF101412),
+        )
       : Colors.white;
   Color get actionBg => dark
-      ? _pick(const Color(0xFF053844), const Color(0xFF2E1850),
-          const Color(0xFF1B2A5E), const Color(0xFF142158))
-      : _pick(const Color(0xFFE3FBF4), const Color(0xFFFFE7E0),
-          const Color(0xFFFFF0CC), const Color(0xFFE4F7FD));
+      ? _pick(
+          const Color(0xFF053844),
+          const Color(0xFF2E1850),
+          const Color(0xFF1B2A5E),
+          const Color(0xFF142158),
+          const Color(0xFF1A221C),
+        )
+      : _pick(
+          const Color(0xFFE3FBF4),
+          const Color(0xFFFFE7E0),
+          const Color(0xFFFFF0CC),
+          const Color(0xFFE4F7FD),
+          const Color(0xFFE3FFE9),
+        );
   Color get border => dark
-      ? _pick(const Color(0xFF0B5566), const Color(0xFF45266E),
-          const Color(0xFF2C3F85), const Color(0xFF22379A))
-      : _pick(const Color(0xFFCFF7EA), const Color(0xFFFFD3C7),
-          const Color(0xFFF5E1AA), const Color(0xFFC4EBF7));
+      ? _pick(
+          const Color(0xFF0B5566),
+          const Color(0xFF45266E),
+          const Color(0xFF2C3F85),
+          const Color(0xFF22379A),
+          const Color(0xFF2A352D),
+        )
+      : _pick(
+          const Color(0xFFCFF7EA),
+          const Color(0xFFFFD3C7),
+          const Color(0xFFF5E1AA),
+          const Color(0xFFC4EBF7),
+          const Color(0xFFC5F2CE),
+        );
 
   Color get title => dark ? aquaFoam : cyberTeal;
   Color get sub => dark
       ? aquaFoam.withAlpha(170)
-      : _pick(const Color(0xFF2A7F85), const Color(0xFF7A5A8C),
-          const Color(0xFF5B6BA8), const Color(0xFF5772C9));
+      : _pick(
+          const Color(0xFF2A7F85),
+          const Color(0xFF7A5A8C),
+          const Color(0xFF5B6BA8),
+          const Color(0xFF5772C9),
+          const Color(0xFF4F7A5C),
+        );
 
   // الزر الرئيسي (ابدأ الملاحة): معكوس حسب الوضع
   Color get primaryBg => dark ? aquaFoam : cyberTeal;
@@ -124,8 +185,13 @@ class _Pal {
       dark ? Colors.black.withAlpha(110) : cyberTeal.withAlpha(45);
 
   Color get bar => dark
-      ? _pick(const Color(0xFF021F26), const Color(0xFF120824),
-          const Color(0xFF0E1740), const Color(0xFF0A1236))
+      ? _pick(
+          const Color(0xFF021F26),
+          const Color(0xFF120824),
+          const Color(0xFF0E1740),
+          const Color(0xFF0A1236),
+          const Color(0xFF000000),
+        )
       : cyberTeal;
   Color get snackBg => dark ? aquaFoam : cyberTeal;
   Color get snackFg => dark ? cyberTeal : aquaFoam;
@@ -159,6 +225,12 @@ class _HomePageScreenState extends State<HomePageScreen> {
     _NavItem(Icons.star_rounded, 'المفضلة'),
     _NavItem(Icons.person_rounded, 'حسابي'),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    ScheduleStore.load(); // تحميل جدول المحاضرات المحفوظ
+  }
 
   @override
   void dispose() {
@@ -213,6 +285,13 @@ class _HomePageScreenState extends State<HomePageScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const CollegesScreen()),
+    );
+  }
+
+  void openSchedule() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ScheduleScreen()),
     );
   }
 
@@ -274,6 +353,8 @@ class _HomePageScreenState extends State<HomePageScreen> {
           _buildHeader(p),
           const SizedBox(height: 18),
           _buildHero(p),
+          const SizedBox(height: 18),
+          NextLectureCard(onOpenSchedule: openSchedule),
           const SizedBox(height: 26),
           Text(
             'الوصول السريع',
@@ -319,6 +400,14 @@ class _HomePageScreenState extends State<HomePageScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          _smallTile(
+            p,
+            Icons.calendar_month_rounded,
+            'جدولي',
+            'محاضراتك وأوقاتها',
+            openSchedule,
+          ),
           const SizedBox(height: 28),
           Center(
             child: Text(
@@ -347,9 +436,7 @@ class _HomePageScreenState extends State<HomePageScreen> {
             gradient: LinearGradient(
               begin: Alignment.topRight,
               end: Alignment.bottomLeft,
-              colors: p.dark
-                  ? [aquaFoam, _accent2]
-                  : [cyberTeal, _deep2],
+              colors: p.dark ? [aquaFoam, _accent2] : [cyberTeal, _deep2],
             ),
             boxShadow: [
               BoxShadow(
@@ -395,7 +482,7 @@ class _HomePageScreenState extends State<HomePageScreen> {
         // زر الثيم: ThemeSwitcher بيحدد نقطة بداية الدائرة من مكان الزر
         ThemeSwitcher(
           builder: (switcherContext) => _roundIconButton(
-            p, 
+            p,
             tooltip: isDark ? 'الوضع الفاتح' : 'الوضع الداكن',
             onPressed: () => toggleTheme(switcherContext),
             child: AnimatedSwitcher(
@@ -607,7 +694,8 @@ class _HomePageScreenState extends State<HomePageScreen> {
                   ),
                   child: TextField(
                     controller: searchController,
-                    style: TextStyle(color: p.title, fontWeight: FontWeight.w600),
+                    style:
+                        TextStyle(color: p.title, fontWeight: FontWeight.w600),
                     textDirection: TextDirection.rtl,
                     textAlign: TextAlign.start,
                     keyboardType: TextInputType.text,
