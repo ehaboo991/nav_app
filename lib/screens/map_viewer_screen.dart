@@ -1,5 +1,10 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import 'calibration_screen.dart';
+import 'campus_map_screen.dart' show pickedStartNotifier;
+import 'map_calibration.dart';
 import 'user_location.dart';
 
 const Color _cyberTeal = Color(0xFF03303B);
@@ -56,6 +61,7 @@ class _MapViewerScreenState extends State<MapViewerScreen>
     );
     pickLocationMode.addListener(_onLocationStateChanged);
     userLocationNotifier.addListener(_onLocationStateChanged);
+    _syncPickedStart();
     _syncPulse();
   }
 
@@ -67,6 +73,22 @@ class _MapViewerScreenState extends State<MapViewerScreen>
     _routeProgress.dispose();
     _pulse.dispose();
     super.dispose();
+  }
+
+  /// إذا حددت نقطة بداية على الخريطة الحقيقية (إحداثيات) ولسا ما إلها
+  /// مكان على الصورة: نحوّلها للصورة إذا المعايرة جاهزة
+  void _syncPickedStart() {
+    if (userLocationNotifier.value != null) return;
+    final picked = pickedStartNotifier.value;
+    if (picked == null) return;
+    final img = MapCalibration.geoToImage(picked);
+    if (img != null &&
+        img.dx >= 0 &&
+        img.dx <= 1 &&
+        img.dy >= 0 &&
+        img.dy <= 1) {
+      userLocationNotifier.value = img;
+    }
   }
 
   void _onLocationStateChanged() {
@@ -110,6 +132,17 @@ class _MapViewerScreenState extends State<MapViewerScreen>
     if (widget.popOnPick && mounted) {
       Navigator.of(context).pop();
     }
+  }
+
+  /// يفتح شاشة المعايرة (وقت التطوير بس) وبعد ما ترجع بنعيد مزامنة النقطة
+  Future<void> _openCalibration() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CalibrationScreen()),
+    );
+    if (!mounted) return;
+    _syncPickedStart();
+    setState(() {});
   }
 
   double get _currentScale => _controller.value.getMaxScaleOnAxis();
@@ -167,6 +200,13 @@ class _MapViewerScreenState extends State<MapViewerScreen>
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
+          // معايرة الخريطة (بوضع debug بس)
+          if (kDebugMode)
+            IconButton(
+              tooltip: 'معايرة الخريطة',
+              icon: const Icon(Icons.tune_rounded),
+              onPressed: _openCalibration,
+            ),
           // تفعيل/إلغاء وضع "حدد موقعك"
           IconButton(
             tooltip: picking ? 'إلغاء تحديد الموقع' : 'حدد موقعك',

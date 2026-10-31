@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 
+import 'campus_map_screen.dart';
 import 'college_data.dart';
-import 'map_viewer_screen.dart';
 import 'user_location.dart';
 
 const Color _cyberTeal = Color(0xFF03303B);
@@ -11,7 +12,11 @@ const Color _aquaFoam = Color(0xFF96FCDF);
 const Color _youBlue = Color(0xFF1A73E8);
 
 class StartNavigationScreen extends StatefulWidget {
-  const StartNavigationScreen({super.key});
+  /// اسم الوجهة اللي بدنا نختارها مسبقاً (مثلاً لما المستخدم يضغط على مبنى
+  /// بالخريطة ويكبس "ابدأ الملاحة"). إذا null الشاشة بتفتح فاضية كالعادة.
+  final String? initialDestination;
+
+  const StartNavigationScreen({super.key, this.initialDestination});
 
   @override
   State<StartNavigationScreen> createState() => _StartNavigationScreenState();
@@ -21,6 +26,15 @@ class _StartNavigationScreenState extends State<StartNavigationScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
   College? _selectedCollege;
+
+  @override
+  void initState() {
+    super.initState();
+    final name = widget.initialDestination;
+    if (name != null) {
+      _selectedCollege = findCollegeByName(name);
+    }
+  }
 
   @override
   void dispose() {
@@ -43,6 +57,11 @@ class _StartNavigationScreenState extends State<StartNavigationScreen> {
     }).toList();
   }
 
+  /// هل نقدر نبدأ ملاحة لهالكلية؟ (فقط إذا موجودة بالخريطة الحقيقية)
+  bool _canNavigate(College? c) =>
+      c != null && findMapBuildingByName(c.nameAr) != null;
+
+  /// الملاحة دايماً على الخريطة الحقيقية بمسار مباشر للوجهة
   void _startNavigation() {
     final destination = _selectedCollege;
     if (destination == null) return;
@@ -50,26 +69,26 @@ class _StartNavigationScreenState extends State<StartNavigationScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => MapViewerScreen(
-          destination: destination.nameAr,
-          buildingNumber: destination.building,
-        ),
+        builder: (_) =>
+            CampusMapScreen(initialDestination: destination.nameAr),
       ),
     );
   }
 
-  /// يفتح الخريطة بوضع "حدد موقعك" وبيرجع تلقائياً بعد أول ضغطة
+  /// يفتح خريطة الكامبس الحقيقية بوضع "حدد موقعك": الضغطة على الخريطة
+  /// (أو على مبنى) بتحط دبوس أحمر، وبعد "تأكيد نقطة البداية" بتنحفظ
+  /// في pickedStartNotifier وبترجع تلقائياً
   void _pickLocation() {
-    pickLocationMode.value = true;
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const MapViewerScreen(popOnPick: true),
+        builder: (_) => const CampusMapScreen(pickMode: true),
       ),
-    ).then((_) => pickLocationMode.value = false); // إذا رجع بدون ما يحدد
+    );
   }
 
-  /// كرت "موقعك الحالي": بيسمع لـ userLocationNotifier وبيتحدث لحاله
+  /// كرت "موقعك الحالي": بيسمع لـ userLocationNotifier و pickedStartNotifier
+  /// وبيتحدث لحاله
   Widget _buildLocationCard({
     required Color surface,
     required Color titleColor,
@@ -79,67 +98,80 @@ class _StartNavigationScreenState extends State<StartNavigationScreen> {
     return ValueListenableBuilder<Offset?>(
       valueListenable: userLocationNotifier,
       builder: (context, loc, _) {
-        final has = loc != null;
-        return Container(
-          margin: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: surface,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: has ? titleColor : borderColor,
-              width: has ? 1.5 : 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: has
-                      ? _youBlue.withAlpha(28)
-                      : titleColor.withAlpha(20),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  has ? Icons.my_location_rounded : Icons.location_searching,
-                  color: has ? _youBlue : secondaryColor,
+        return ValueListenableBuilder<LatLng?>(
+          valueListenable: pickedStartNotifier,
+          builder: (context, picked, _) {
+            final has = loc != null || picked != null;
+            return Container(
+              margin: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: has ? titleColor : borderColor,
+                  width: has ? 1.5 : 1,
                 ),
               ),
-              const SizedBox(width: 13),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'موقعك الحالي',
-                      style: TextStyle(
-                        color: titleColor,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: has
+                          ? _youBlue.withAlpha(28)
+                          : titleColor.withAlpha(20),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      has ? 'تم تحديد موقعك على الخريطة' : 'لم تحدد موقعك بعد',
-                      style: TextStyle(color: secondaryColor, fontSize: 12),
+                    child: Icon(
+                      has
+                          ? Icons.my_location_rounded
+                          : Icons.location_searching,
+                      color: has ? _youBlue : secondaryColor,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'موقعك الحالي',
+                          style: TextStyle(
+                            color: titleColor,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          has
+                              ? 'تم تحديد موقعك على الخريطة'
+                              : 'لم تحدد موقعك بعد',
+                          style:
+                              TextStyle(color: secondaryColor, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _pickLocation,
+                    child: Text(has ? 'تغيير' : 'حدد موقعك'),
+                  ),
+                  if (has)
+                    IconButton(
+                      tooltip: 'إزالة موقعي',
+                      icon: Icon(Icons.close_rounded, color: secondaryColor),
+                      onPressed: () {
+                        userLocationNotifier.value = null;
+                        pickedStartNotifier.value = null;
+                      },
+                    ),
+                ],
               ),
-              TextButton(
-                onPressed: _pickLocation,
-                child: Text(has ? 'تغيير' : 'حدد موقعك'),
-              ),
-              if (has)
-                IconButton(
-                  tooltip: 'إزالة موقعي',
-                  icon: Icon(Icons.close_rounded, color: secondaryColor),
-                  onPressed: () => userLocationNotifier.value = null,
-                ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -301,7 +333,8 @@ class _StartNavigationScreenState extends State<StartNavigationScreen> {
                         separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (context, index) {
                           final college = destinations[index];
-                          final isSelected = college == _selectedCollege;
+                          final isSelected =
+                              college.nameAr == _selectedCollege?.nameAr;
                           return Material(
                             color: surface,
                             borderRadius: BorderRadius.circular(18),
@@ -352,9 +385,13 @@ class _StartNavigationScreenState extends State<StartNavigationScreen> {
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            college.building == 0
-                                                ? 'مبنى غير محدد • جامعة مؤتة'
-                                                : 'مبنى ${college.building} • جامعة مؤتة',
+                                            findMapBuildingByName(
+                                                        college.nameAr) !=
+                                                    null
+                                                ? 'ملاحة على الخريطة • جامعة مؤتة'
+                                                : college.building != 0
+                                                ? 'مبنى ${college.building} • جامعة مؤتة'
+                                                : 'مبنى غير محدد • جامعة مؤتة',
                                             style: TextStyle(
                                               color: secondaryColor,
                                               fontSize: 12,
@@ -393,15 +430,14 @@ class _StartNavigationScreenState extends State<StartNavigationScreen> {
             child: SizedBox(
               height: 54,
               child: FilledButton.icon(
-                onPressed:
-                    _selectedCollege == null || _selectedCollege!.building == 0
-                    ? null
-                    : _startNavigation,
+                onPressed: _canNavigate(_selectedCollege)
+                    ? _startNavigation
+                    : null,
                 icon: const Icon(Icons.navigation_rounded),
                 label: Text(
                   _selectedCollege == null
                       ? 'اختر وجهتك أولاً'
-                      : _selectedCollege!.building == 0
+                      : !_canNavigate(_selectedCollege)
                       ? 'موقع هذه الكلية غير محدد على الخريطة'
                       : 'ابدأ الملاحة إلى ${_selectedCollege!.nameAr}',
                   maxLines: 1,
