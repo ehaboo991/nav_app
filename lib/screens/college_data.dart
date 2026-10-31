@@ -99,3 +99,29 @@ const List<College> colleges = [
     building: 8, // ⚠️ عدّل الرقم حسب الخريطة
   ),
 ];
+
+/// بيوحّد الكتابة قبل المقارنة: بيشيل المسافات والتطويل، وبيوحّد
+/// الألف (أ إ آ → ا) والتاء المربوطة والألف المقصورة.
+/// عشان "كلية العلوم 1" (من الخريطة) تطابق "كلية العلوم1" (من college_data)
+String normalizeAr(String s) => s
+    .replaceAll(RegExp(r'[\s\u0640]'), '')
+    .replaceAll(RegExp('[أإآ]'), 'ا')
+    .replaceAll('ة', 'ه')
+    .replaceAll('ى', 'ي');
+
+/// بيدور على الكلية المطابقة لاسم مبنى (من خريطة الكامبس مثلاً).
+/// تطابق تام أولاً، وبعدين تطابق جزئي (مثل "كلية الطب" ↔ "كلية الطب البشري").
+/// بيرجّع null إذا المكان مش كلية (مكتبة، بنك، ...).
+College? findCollegeByName(String name) {
+  final target = normalizeAr(name);
+  if (target.isEmpty) return null;
+
+  for (final c in colleges) {
+    if (normalizeAr(c.nameAr) == target) return c;
+  }
+  for (final c in colleges) {
+    final n = normalizeAr(c.nameAr);
+    if (n.contains(target) || target.contains(n)) return c;
+  }
+  return null;
+}

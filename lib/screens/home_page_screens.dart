@@ -4,14 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:animated_theme_switcher/animated_theme_switcher.dart';
-import 'map_viewer_screen.dart';
+import 'campus_map_screen.dart'; // ← جديد: خريطة الكامبس للتاب
 import 'colleges_screen.dart';
 import 'favourite_screen.dart';
 import 'account_screen.dart';
 import 'start_navigation_screen.dart';
 import 'nav_ai_screen.dart';
 import 'other_places_screen.dart';
-import 'user_location.dart';
 import 'schedule_data.dart';
 import 'schedule_screen.dart';
 import 'next_card.dart';
@@ -215,8 +214,6 @@ class _HomePageScreenState extends State<HomePageScreen> {
 
   final GlobalKey<CurvedNavigationBarState> _navKey = GlobalKey();
 
-  final TextEditingController searchController = TextEditingController();
-
   // 0 الرئيسية | 1 الخريطة | 2 NAV AI (بالمنتصف) | 3 المفضلة | 4 حسابي
   static const List<_NavItem> _navItems = [
     _NavItem(Icons.home_rounded, 'الرئيسية'),
@@ -230,12 +227,6 @@ class _HomePageScreenState extends State<HomePageScreen> {
   void initState() {
     super.initState();
     ScheduleStore.load(); // تحميل جدول المحاضرات المحفوظ
-  }
-
-  @override
-  void dispose() {
-    searchController.dispose();
-    super.dispose();
   }
 
   bool get isDark => Theme.of(context).brightness == Brightness.dark;
@@ -265,6 +256,7 @@ class _HomePageScreenState extends State<HomePageScreen> {
     );
   }
 
+  /// يفتح تاب الخريطة (CampusMapScreen) مع بقاء الـ navigation bar
   void openMap() => _goToTab(1);
 
   void openNavigation() {
@@ -327,7 +319,10 @@ class _HomePageScreenState extends State<HomePageScreen> {
           _aiOpened
               ? const NavAiScreen(embedded: true)
               : const SizedBox.shrink(),
-          _mapOpened ? const MapViewerScreen() : const SizedBox.shrink(),
+          // ← التعديل: الخريطة هون CampusMapScreen بدل MapViewerScreen
+          _mapOpened
+              ? const CampusMapScreen(embedded: true)
+              : const SizedBox.shrink(),
         ],
       ),
       bottomNavigationBar: _buildNavBar(p.bg),
@@ -530,7 +525,7 @@ class _HomePageScreenState extends State<HomePageScreen> {
     );
   }
 
-  /// العنصر الأبرز بالصفحة: الخريطة كواجهة رئيسية + الترحيب + البحث
+  /// كرت الترحيب بصورة الجامعة — الضغط عليه يفتح تاب الخريطة
   Widget _buildHero(_Pal p) {
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: 1),
@@ -541,7 +536,7 @@ class _HomePageScreenState extends State<HomePageScreen> {
         child: Transform.scale(scale: 0.96 + 0.04 * v, child: child),
       ),
       child: Container(
-        height: 330,
+        height: 230,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
@@ -557,7 +552,7 @@ class _HomePageScreenState extends State<HomePageScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // الخلفية: صورة الخريطة + تدرج لوني — الضغط عليها يفتح الخريطة
+              // الخلفية: صورة الجامعة + تدرج لوني — الضغط عليها يفتح تاب الخريطة
               GestureDetector(
                 onTap: openMap,
                 child: Stack(
@@ -598,139 +593,34 @@ class _HomePageScreenState extends State<HomePageScreen> {
                 ),
               ),
 
-              // الترحيب + زر فتح الخريطة
-              PositionedDirectional(
+              // الترحيب
+              const PositionedDirectional(
                 top: 22,
                 start: 22,
-                end: 18,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'مرحباً بعودتك 👋',
-                            style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.w800,
-                              color: aquaFoam,
-                              height: 1.2,
-                            ),
-                          ),
-                          SizedBox(height: 6),
-                          Text(
-                            'وين حاب تروح اليوم؟',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // زر "حدد موقعك": بيفتح الخريطة بوضع تحديد المكان
-                    ValueListenableBuilder<Offset?>(
-                      valueListenable: userLocationNotifier,
-                      builder: (_, loc, _) => GestureDetector(
-                        onTap: () {
-                          pickLocationMode.value = true;
-                          openMap();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withAlpha(30),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: aquaFoam.withAlpha(110)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                loc == null
-                                    ? Icons.my_location_rounded
-                                    : Icons.edit_location_alt_rounded,
-                                size: 16,
-                                color: aquaFoam,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                loc == null ? 'حدد موقعك' : 'غيّر موقعك',
-                                style: const TextStyle(
-                                  color: aquaFoam,
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
+                end: 22,
+                child: IgnorePointer(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'مرحباً بعودتك 👋',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color: aquaFoam,
+                          height: 1.2,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // شريط البحث العائم
-              PositionedDirectional(
-                bottom: 18,
-                start: 16,
-                end: 16,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: p.surface,
-                    borderRadius: BorderRadius.circular(22),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(60),
-                        blurRadius: 18,
-                        offset: const Offset(0, 8),
+                      SizedBox(height: 6),
+                      Text(
+                        'وين حاب تروح اليوم؟',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ],
-                  ),
-                  child: TextField(
-                    controller: searchController,
-                    style:
-                        TextStyle(color: p.title, fontWeight: FontWeight.w600),
-                    textDirection: TextDirection.rtl,
-                    textAlign: TextAlign.start,
-                    keyboardType: TextInputType.text,
-                    textInputAction: TextInputAction.search,
-                    onSubmitted: (value) {
-                      if (value.trim().isNotEmpty) {
-                        showMessage('بحث عن: $value');
-                      }
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'ابحث عن قاعة أو مبنى...',
-                      hintStyle: TextStyle(color: p.sub, fontSize: 14.5),
-                      prefixIcon:
-                          Icon(Icons.search_rounded, color: p.title, size: 24),
-                      suffixIcon: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Material(
-                          color: p.primaryBg,
-                          borderRadius: BorderRadius.circular(14),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(14),
-                            onTap: () {
-                              final v = searchController.text.trim();
-                              if (v.isNotEmpty) showMessage('بحث عن: $v');
-                            },
-                            child: Icon(Icons.tune_rounded,
-                                color: p.primaryFg, size: 20),
-                          ),
-                        ),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                    ),
                   ),
                 ),
               ),
