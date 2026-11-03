@@ -82,7 +82,7 @@ const List<_Hall> _complexes = [
   _Hall(
     'مجمع الشهيد',
     'Al-Shaheed Complex',
-    'image/shaheed_complex.jpeg',
+    'image/shaheed.jpeg',
     Icons.business_rounded,
   ),
 ];
