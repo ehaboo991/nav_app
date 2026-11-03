@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'favourite_screen.dart' show favoritesNotifier;
 import 'home_page_screens.dart' show themeNotifier;
+import 'notification.dart'; // ⚠️ عدّل المسار حسب مشروعك
 import 'user_session_screen.dart';
 import 'welcome_screen.dart'; // ⚠️ عدّل اسم الملف حسب ملف شاشة الترحيب عندك
 
@@ -112,6 +113,33 @@ class _AccountScreenState extends State<AccountScreen> {
                 title: 'اللغة',
                 subtitle: 'العربية / English',
                 onTap: _showLanguage,
+              ),
+              const SizedBox(height: 12),
+              // ---------- تنبيهات المحاضرات ----------
+              ValueListenableBuilder<bool>(
+                valueListenable: NotificationService.enabledNotifier,
+                builder: (context, enabled, _) {
+                  return _menuTile(
+                    icon: enabled
+                        ? Icons.notifications_active_outlined
+                        : Icons.notifications_off_outlined,
+                    title: 'تنبيهات المحاضرات',
+                    subtitle: enabled
+                        ? 'تذكير قبل المحاضرة بـ ${NotificationService.reminderMinutes} دقيقة وعند بدايتها'
+                        : 'التنبيهات متوقفة',
+                    onTap: () => NotificationService.setEnabled(!enabled),
+                    trailing: Switch(
+                      value: enabled,
+                      onChanged: NotificationService.setEnabled,
+                      activeColor: _cyberTeal,
+                      activeTrackColor: _aquaFoam,
+                      inactiveThumbColor: _cyberTeal,
+                      inactiveTrackColor: _tileBg,
+                      trackOutlineColor:
+                          WidgetStateProperty.all(Colors.transparent),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 12),
               _menuTile(

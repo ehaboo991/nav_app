@@ -396,7 +396,7 @@ class _HomePageScreenState extends State<HomePageScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          _smallTile(
+          _wideTile(
             p,
             Icons.calendar_month_rounded,
             'جدولي',
@@ -745,62 +745,134 @@ class _HomePageScreenState extends State<HomePageScreen> {
     String subtitle,
     VoidCallback onTap,
   ) {
-    return Container(
-      height: 150,
-      decoration: BoxDecoration(
-        color: p.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: p.border),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
+    return _HoverLift(
+      child: Container(
+        height: 150,
+        decoration: BoxDecoration(
+          color: p.surface,
           borderRadius: BorderRadius.circular(22),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: p.actionBg,
-                    borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: p.border),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(22),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: p.actionBg,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(icon, color: p.title, size: 24),
                   ),
-                  child: Icon(icon, color: p.title, size: 24),
-                ),
-                const Spacer(),
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: p.title,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
+                  const Spacer(),
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: p.title,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 3),
-                // ارتفاع ثابت يكفي سطرين، عشان العناوين تتساوى بكل البطاقات
-                SizedBox(
-                  height: 30,
-                  child: Align(
-                    alignment: AlignmentDirectional.topStart,
-                    child: Text(
-                      subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: p.sub,
-                        fontSize: 11,
-                        height: 1.3,
+                  const SizedBox(height: 3),
+                  // ارتفاع ثابت يكفي سطرين، عشان العناوين تتساوى بكل البطاقات
+                  SizedBox(
+                    height: 30,
+                    child: Align(
+                      alignment: AlignmentDirectional.topStart,
+                      child: Text(
+                        subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: p.sub,
+                          fontSize: 11,
+                          height: 1.3,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// كرت عريض (أيقونة + نص + سهم) بارتفاع على قد المحتوى
+  Widget _wideTile(
+    _Pal p,
+    IconData icon,
+    String title,
+    String subtitle,
+    VoidCallback onTap,
+  ) {
+    return _HoverLift(
+      child: Container(
+        decoration: BoxDecoration(
+          color: p.surface,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: p.border),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(22),
+            onTap: onTap,
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: p.actionBg,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(icon, color: p.title, size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            color: p.title,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          style: TextStyle(color: p.sub, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_left_rounded,
+                    textDirection: TextDirection.ltr,
+                    color: p.sub,
+                    size: 26,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -881,6 +953,47 @@ class _NavItem {
   final String label;
 
   const _NavItem(this.icon, this.label);
+}
+
+/// قفزة بسيطة للأعلى عند مرور المؤشر (ويب/ديسكتوب) أو عند الضغط (موبايل)
+class _HoverLift extends StatefulWidget {
+  final Widget child;
+  const _HoverLift({required this.child});
+
+  @override
+  State<_HoverLift> createState() => _HoverLiftState();
+}
+
+class _HoverLiftState extends State<_HoverLift> {
+  bool _hover = false;
+  bool _pressed = false;
+
+  bool get _active => _hover || _pressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: Listener(
+        onPointerDown: (_) => setState(() => _pressed = true),
+        onPointerUp: (_) => setState(() => _pressed = false),
+        onPointerCancel: (_) => setState(() => _pressed = false),
+        child: AnimatedSlide(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          offset: _active ? const Offset(0, -0.05) : Offset.zero,
+          child: AnimatedScale(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            scale: _active ? 1.03 : 1.0,
+            child: widget.child,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ════════════════════════════════════════════════════════════════

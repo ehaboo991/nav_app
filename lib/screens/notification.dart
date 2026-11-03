@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -13,6 +14,14 @@ class NotificationService {
 
   /// الوقت قبل المحاضرة اللي بيجي فيه التذكير (بالدقائق)
   static const int reminderMinutes = 15;
+
+  static const _prefKey = 'lecture_notifications_enabled';
+
+  /// حالة التنبيهات (الشاشة بتسمع عليه)
+  static final ValueNotifier<bool> enabledNotifier = ValueNotifier<bool>(true);
+
+  /// آخر جدول انبعت، عشان نقدر نعيد الجدولة لما يتغير الخيار
+  static List<Lecture> _lastLectures = [];
 
   static const _details = NotificationDetails(
     android: AndroidNotificationDetails(
@@ -28,6 +37,10 @@ class NotificationService {
   static Future<void> init() async {
     if (_ready) return;
     try {
+      // تحميل اختيار المستخدم المحفوظ
+      final prefs = await SharedPreferences.getInstance();
+      enabledNotifier.value = prefs.getBool(_prefKey) ?? true;
+
       tzdata.initializeTimeZones();
       tz.setLocalLocation(tz.getLocation('Asia/Amman'));
 
@@ -54,6 +67,28 @@ class NotificationService {
     }
   }
 
+  /// تفعيل / إلغاء تنبيهات المحاضرات
+  static Future<void> setEnabled(bool value) async {
+    enabledNotifier.value = value;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefKey, value);
+
+      if (value && _ready) {
+        // نتأكد إن الصلاحيات لسا موجودة
+        await _plugin
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>()
+            ?.requestNotificationsPermission();
+      }
+    } catch (e) {
+      debugPrint('Notification setEnabled failed: $e');
+    }
+
+    await rescheduleAll(_lastLectures);
+  }
+
   /// أقرب وقت جاي (بعد الآن) لهذا اليوم والدقيقة
   static tz.TZDateTime _next(int weekday, int minuteOfDay) {
     final now = tz.TZDateTime.now(tz.local);
@@ -73,9 +108,13 @@ class NotificationService {
 
   /// بيلغي كل الإشعارات القديمة وبيجدول من جديد حسب الجدول الحالي
   static Future<void> rescheduleAll(List<Lecture> lectures) async {
+    _lastLectures = lectures; // نحفظ الجدول دايماً
     if (!_ready) return;
     try {
       await _plugin.cancelAll();
+
+      // إذا التنبيهات مطفية، بنكتفي بالإلغاء
+      if (!enabledNotifier.value) return;
 
       var id = 0;
       for (final l in lectures) {
